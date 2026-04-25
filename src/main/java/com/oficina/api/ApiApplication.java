@@ -8,7 +8,7 @@ public class ApiApplication {
 
 	public static void main(String[] args) {
 		SpringApplication.run(ApiApplication.class, args);
-		System.out.println("Hello fucking world!");
+		System.out.println("OFICINA API - INICIADA");
 	}
 
 }
