@@ -15,6 +15,11 @@ import com.oficina.api.model.ItemServicoOrdem;
 import com.oficina.api.model.OrdemServico;
 import com.oficina.api.model.enums.StatusOrdemServico;
 import com.oficina.api.service.OrdemServicoService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +39,8 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/ordens-servico")
+@Tag(name = "Ordens de Serviço", description = "Criação, acompanhamento e gestão de ordens de serviço")
+@SecurityRequirement(name = "bearerAuth")
 public class OrdemServicoController {
 
     private final OrdemServicoService ordemServicoService;
@@ -43,42 +50,92 @@ public class OrdemServicoController {
     }
 
     @GetMapping("/{id}")
+    @Operation(summary = "Buscar ordem por ID", description = "Retorna os detalhes completos de uma ordem de serviço.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Operação realizada com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado"),
+            @ApiResponse(responseCode = "404", description = "Recurso não encontrado")
+    })
     public ResponseEntity<OrdemServicoResponse> buscarPorId(@PathVariable Long id) {
         OrdemServico ordemServico = ordemServicoService.buscarPorId(id);
         return ResponseEntity.ok(toResponse(ordemServico));
     }
 
     @GetMapping
+    @Operation(summary = "Listar ordens de serviço", description = "Retorna a lista resumida de ordens de serviço.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Operação realizada com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado")
+    })
     public ResponseEntity<List<OrdemServicoResumoResponse>> listar() {
         List<OrdemServico> ordens = ordemServicoService.listar();
         return ResponseEntity.ok(toResumoResponseList(ordens));
     }
 
     @GetMapping("/cliente/{clienteId}")
+    @Operation(summary = "Listar ordens por cliente", description = "Retorna as ordens de serviço associadas a um cliente.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Operação realizada com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado"),
+            @ApiResponse(responseCode = "404", description = "Recurso não encontrado")
+    })
     public ResponseEntity<List<OrdemServicoResumoResponse>> listarPorCliente(@PathVariable Long clienteId) {
         List<OrdemServico> ordens = ordemServicoService.listarPorCliente(clienteId);
         return ResponseEntity.ok(toResumoResponseList(ordens));
     }
 
     @GetMapping("/veiculo/{veiculoId}")
+    @Operation(summary = "Listar ordens por veículo", description = "Retorna as ordens de serviço associadas a um veículo.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Operação realizada com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado"),
+            @ApiResponse(responseCode = "404", description = "Recurso não encontrado")
+    })
     public ResponseEntity<List<OrdemServicoResumoResponse>> listarPorVeiculo(@PathVariable Long veiculoId) {
         List<OrdemServico> ordens = ordemServicoService.listarPorVeiculo(veiculoId);
         return ResponseEntity.ok(toResumoResponseList(ordens));
     }
 
     @GetMapping("/status/{status}")
+    @Operation(summary = "Listar ordens por status", description = "Retorna as ordens de serviço filtradas por status.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Operação realizada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos ou regra de negócio violada"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado")
+    })
     public ResponseEntity<List<OrdemServicoResumoResponse>> listarPorStatus(@PathVariable StatusOrdemServico status) {
         List<OrdemServico> ordens = ordemServicoService.listarPorStatus(status);
         return ResponseEntity.ok(toResumoResponseList(ordens));
     }
 
     @PostMapping
+    @Operation(summary = "Criar ordem de serviço", description = "Abre uma nova ordem de serviço para cliente e veículo.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "201", description = "Recurso criado com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos ou regra de negócio violada"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado"),
+            @ApiResponse(responseCode = "404", description = "Recurso não encontrado")
+    })
     public ResponseEntity<OrdemServicoResponse> criarOrdemServico(@Valid @RequestBody CriarOrdemServicoRequest request) {
         OrdemServico ordemServico = ordemServicoService.criarOrdemServico(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(ordemServico));
     }
 
     @PostMapping("/{id}/servicos")
+    @Operation(summary = "Adicionar serviço na ordem", description = "Inclui um serviço na ordem de serviço informada.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Operação realizada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos ou regra de negócio violada"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado"),
+            @ApiResponse(responseCode = "404", description = "Recurso não encontrado")
+    })
     public ResponseEntity<OrdemServicoResponse> adicionarServico(@PathVariable Long id,
                                                                  @Valid @RequestBody AdicionarServicoOrdemRequest request) {
         OrdemServico ordemServico = ordemServicoService.adicionarServico(id, request);
@@ -86,6 +143,14 @@ public class OrdemServicoController {
     }
 
     @PostMapping("/{id}/pecas")
+    @Operation(summary = "Adicionar peça na ordem", description = "Inclui uma peça ou insumo na ordem de serviço informada.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Operação realizada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos ou regra de negócio violada"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado"),
+            @ApiResponse(responseCode = "404", description = "Recurso não encontrado")
+    })
     public ResponseEntity<OrdemServicoResponse> adicionarPeca(@PathVariable Long id,
                                                               @Valid @RequestBody AdicionarPecaOrdemRequest request) {
         OrdemServico ordemServico = ordemServicoService.adicionarPeca(id, request);
@@ -93,6 +158,14 @@ public class OrdemServicoController {
     }
 
     @PatchMapping("/{id}/status")
+    @Operation(summary = "Atualizar status da ordem", description = "Atualiza o status atual de uma ordem de serviço.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Operação realizada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos ou regra de negócio violada"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado"),
+            @ApiResponse(responseCode = "404", description = "Recurso não encontrado")
+    })
     public ResponseEntity<OrdemServicoResponse> atualizarStatus(@PathVariable Long id,
                                                                 @Valid @RequestBody AtualizarStatusOrdemServicoRequest request) {
         OrdemServico ordemServico = ordemServicoService.atualizarStatus(id, request);
@@ -100,6 +173,14 @@ public class OrdemServicoController {
     }
 
     @PatchMapping("/{id}/orcamento")
+    @Operation(summary = "Aprovar ou reprovar orçamento", description = "Registra a decisão do cliente sobre o orçamento da ordem de serviço.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Operação realizada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos ou regra de negócio violada"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado"),
+            @ApiResponse(responseCode = "404", description = "Recurso não encontrado")
+    })
     public ResponseEntity<OrdemServicoResponse> aprovarOrcamento(@PathVariable Long id,
                                                                  @Valid @RequestBody AprovarOrcamentoRequest request) {
         OrdemServico ordemServico = ordemServicoService.aprovarOrcamento(id, request);
