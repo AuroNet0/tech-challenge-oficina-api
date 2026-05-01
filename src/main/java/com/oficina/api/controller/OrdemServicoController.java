@@ -187,6 +187,20 @@ public class OrdemServicoController {
         return ResponseEntity.ok(toResponse(ordemServico));
     }
 
+    @PostMapping("/{id}/enviar-orcamento")
+    @Operation(summary = "Enviar orcamento para aprovacao", description = "Muda o status da ordem para AGUARDANDO_APROVACAO.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Operacao realizada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados invalidos ou regra de negocio violada"),
+            @ApiResponse(responseCode = "401", description = "Nao autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado"),
+            @ApiResponse(responseCode = "404", description = "Recurso nao encontrado")
+    })
+    public ResponseEntity<OrdemServicoResponse> enviarOrcamento(@PathVariable Long id) {
+        OrdemServico ordemServico = ordemServicoService.enviarOrcamento(id);
+        return ResponseEntity.ok(toResponse(ordemServico));
+    }
+
     private OrdemServicoResponse toResponse(OrdemServico ordemServico) {
         List<ItemServicoOrdemResponse> itensServico = toItensServicoResponse(ordemServico.getItensServico());
         List<ItemPecaOrdemResponse> itensPeca = toItensPecaResponse(ordemServico.getItensPeca());

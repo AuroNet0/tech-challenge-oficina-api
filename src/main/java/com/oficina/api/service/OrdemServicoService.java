@@ -70,7 +70,7 @@ public class OrdemServicoService {
     @Transactional
     public OrdemServico adicionarServico(Long ordemServicoId, AdicionarServicoOrdemRequest request) {
         OrdemServico ordemServico = buscarOrdemServicoOuFalhar(ordemServicoId);
-        validarStatusParaAdicionarItens(ordemServico.getStatus());
+        garantirStatusEmDiagnostico(ordemServico);
         Servico servico = buscarServicoOuFalhar(request.servicoId());
 
         ItemServicoOrdem itemServico = new ItemServicoOrdem();
@@ -88,7 +88,7 @@ public class OrdemServicoService {
     @Transactional
     public OrdemServico adicionarPeca(Long ordemServicoId, AdicionarPecaOrdemRequest request) {
         OrdemServico ordemServico = buscarOrdemServicoOuFalhar(ordemServicoId);
-        validarStatusParaAdicionarItens(ordemServico.getStatus());
+        garantirStatusEmDiagnostico(ordemServico);
         Peca peca = buscarPecaOuFalhar(request.pecaId());
 
         validarEstoqueDisponivel(peca, request.quantidade());
@@ -138,6 +138,18 @@ public class OrdemServicoService {
             ordemServico.setStatus(StatusOrdemServico.CANCELADA);
         }
 
+        return ordemServicoRepository.save(ordemServico);
+    }
+
+    @Transactional
+    public OrdemServico enviarOrcamento(Long ordemServicoId) {
+        OrdemServico ordemServico = buscarOrdemServicoOuFalhar(ordemServicoId);
+
+        if (ordemServico.getStatus() != StatusOrdemServico.EM_DIAGNOSTICO) {
+            throw new BusinessException("A ordem de servico deve estar EM_DIAGNOSTICO para envio de orcamento.");
+        }
+
+        ordemServico.setStatus(StatusOrdemServico.AGUARDANDO_APROVACAO);
         return ordemServicoRepository.save(ordemServico);
     }
 
@@ -235,9 +247,9 @@ public class OrdemServicoService {
         ordemServico.setValorTotal(totalServicos.add(totalPecas));
     }
 
-    private void validarStatusParaAdicionarItens(StatusOrdemServico statusAtual) {
-        if (statusAtual != StatusOrdemServico.RECEBIDA && statusAtual != StatusOrdemServico.EM_DIAGNOSTICO) {
-            throw new BusinessException("Nao e permitido adicionar itens com a OS no status " + statusAtual + ".");
+    private void garantirStatusEmDiagnostico(OrdemServico ordemServico) {
+        if (ordemServico.getStatus() != StatusOrdemServico.EM_DIAGNOSTICO) {
+            ordemServico.setStatus(StatusOrdemServico.EM_DIAGNOSTICO);
         }
     }
 }
