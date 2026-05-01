@@ -79,6 +79,20 @@ public class ClienteController {
         return ResponseEntity.ok(toResponse(cliente));
     }
 
+    @GetMapping("/cpf-cnpj/{cpfCnpj}")
+    @Operation(summary = "Buscar cliente por CPF/CNPJ", description = "Retorna os dados de um cliente a partir do CPF ou CNPJ.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Operacao realizada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "CPF/CNPJ invalido"),
+            @ApiResponse(responseCode = "401", description = "Nao autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado"),
+            @ApiResponse(responseCode = "404", description = "Recurso nao encontrado")
+    })
+    public ResponseEntity<ClienteResponse> buscarPorCpfOuCnpj(@PathVariable String cpfCnpj) {
+        Cliente cliente = clienteService.buscarPorCpfOuCnpj(cpfCnpj);
+        return ResponseEntity.ok(toResponse(cliente));
+    }
+
     @PutMapping("/{id}")
     @Operation(summary = "Atualizar cliente", description = "Atualiza os dados cadastrais de um cliente existente.")
     @ApiResponses(value = {

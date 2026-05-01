@@ -51,6 +51,13 @@ public class ClienteService {
     }
 
     @Transactional(readOnly = true)
+    public Cliente buscarPorCpfOuCnpj(String cpfCnpj) {
+        validarCpfCnpj(cpfCnpj);
+        return clienteRepository.findByCpfCnpj(cpfCnpj)
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente nao encontrado."));
+    }
+
+    @Transactional(readOnly = true)
     public List<Cliente> listar() {
         return clienteRepository.findAll();
     }
