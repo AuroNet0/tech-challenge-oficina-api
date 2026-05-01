@@ -33,6 +33,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.List;
 
@@ -233,7 +235,8 @@ public class OrdemServicoController {
                 ordemServico.getVeiculo() != null ? ordemServico.getVeiculo().getPlaca() : null,
                 ordemServico.getStatus(),
                 ordemServico.getDataAbertura(),
-                nullSafe(ordemServico.getValorTotal())
+                nullSafe(ordemServico.getValorTotal()),
+                calcularTempoExecucaoHoras(ordemServico)
         );
     }
 
@@ -296,5 +299,19 @@ public class OrdemServicoController {
 
     private BigDecimal nullSafe(BigDecimal valor) {
         return valor == null ? BigDecimal.ZERO : valor;
+    }
+
+    private BigDecimal calcularTempoExecucaoHoras(OrdemServico ordemServico) {
+        if (ordemServico.getDataInicioExecucao() == null || ordemServico.getDataFinalizacao() == null) {
+            return null;
+        }
+
+        long minutos = Duration.between(ordemServico.getDataInicioExecucao(), ordemServico.getDataFinalizacao()).toMinutes();
+        if (minutos < 0) {
+            return null;
+        }
+
+        return BigDecimal.valueOf(minutos)
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
     }
 }

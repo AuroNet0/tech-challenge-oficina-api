@@ -48,6 +48,9 @@ public class OrdemServico {
     @Column(name = "data_finalizacao")
     private LocalDateTime dataFinalizacao;
 
+    @Column(name = "data_inicio_execucao")
+    private LocalDateTime dataInicioExecucao;
+
     @Column(name = "valor_total", nullable = false, precision = 12, scale = 2)
     private BigDecimal valorTotal = BigDecimal.ZERO;
 
@@ -64,7 +67,7 @@ public class OrdemServico {
     }
 
     public OrdemServico(Long id, Cliente cliente, Veiculo veiculo, StatusOrdemServico status, LocalDateTime dataAbertura,
-                        LocalDateTime dataFinalizacao, BigDecimal valorTotal, String observacoes,
+                        LocalDateTime dataFinalizacao, LocalDateTime dataInicioExecucao, BigDecimal valorTotal, String observacoes,
                         List<ItemServicoOrdem> itensServico, List<ItemPecaOrdem> itensPeca) {
         this.id = id;
         this.cliente = cliente;
@@ -72,6 +75,7 @@ public class OrdemServico {
         this.status = status;
         this.dataAbertura = dataAbertura;
         this.dataFinalizacao = dataFinalizacao;
+        this.dataInicioExecucao = dataInicioExecucao;
         this.valorTotal = valorTotal;
         this.observacoes = observacoes;
         this.itensServico = itensServico;
@@ -137,6 +141,14 @@ public class OrdemServico {
 
     public void setDataFinalizacao(LocalDateTime dataFinalizacao) {
         this.dataFinalizacao = dataFinalizacao;
+    }
+
+    public LocalDateTime getDataInicioExecucao() {
+        return dataInicioExecucao;
+    }
+
+    public void setDataInicioExecucao(LocalDateTime dataInicioExecucao) {
+        this.dataInicioExecucao = dataInicioExecucao;
     }
 
     public BigDecimal getValorTotal() {

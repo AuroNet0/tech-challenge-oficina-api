@@ -134,6 +134,7 @@ class OrdemServicoTest {
         Cliente cliente = new Cliente();
         Veiculo veiculo = new Veiculo();
         LocalDateTime dataAbertura = LocalDateTime.of(2026, 3, 1, 9, 0);
+        LocalDateTime dataInicioExecucao = LocalDateTime.of(2026, 3, 1, 10, 0);
         LocalDateTime dataFinalizacao = LocalDateTime.of(2026, 3, 2, 18, 30);
         BigDecimal valorTotal = new BigDecimal("980.40");
         List<ItemServicoOrdem> itensServico = new ArrayList<>();
@@ -146,6 +147,7 @@ class OrdemServicoTest {
                 StatusOrdemServico.FINALIZADA,
                 dataAbertura,
                 dataFinalizacao,
+                dataInicioExecucao,
                 valorTotal,
                 "Observacao teste",
                 itensServico,
@@ -158,6 +160,7 @@ class OrdemServicoTest {
         assertThat(ordemServico.getStatus()).isEqualTo(StatusOrdemServico.FINALIZADA);
         assertThat(ordemServico.getDataAbertura()).isEqualTo(dataAbertura);
         assertThat(ordemServico.getDataFinalizacao()).isEqualTo(dataFinalizacao);
+        assertThat(ordemServico.getDataInicioExecucao()).isEqualTo(dataInicioExecucao);
         assertThat(ordemServico.getValorTotal()).isEqualByComparingTo("980.40");
         assertThat(ordemServico.getObservacoes()).isEqualTo("Observacao teste");
         assertThat(ordemServico.getItensServico()).isSameAs(itensServico);

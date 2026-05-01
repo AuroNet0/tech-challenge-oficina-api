@@ -11,6 +11,7 @@ public record OrdemServicoResumoResponse(
         String veiculoPlaca,
         StatusOrdemServico status,
         LocalDateTime dataAbertura,
-        BigDecimal valorTotal
+        BigDecimal valorTotal,
+        BigDecimal tempoExecucaoHoras
 ) {
 }

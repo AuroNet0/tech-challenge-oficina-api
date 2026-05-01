@@ -134,6 +134,9 @@ public class OrdemServicoService {
             validarTransicaoStatus(statusAtual, StatusOrdemServico.EM_EXECUCAO);
             //TO-DO: Lógica de baixa no estoque.
             ordemServico.setStatus(StatusOrdemServico.EM_EXECUCAO);
+            if (ordemServico.getDataInicioExecucao() == null) {
+                ordemServico.setDataInicioExecucao(LocalDateTime.now());
+            }
         } else {
             ordemServico.setStatus(StatusOrdemServico.CANCELADA);
         }
