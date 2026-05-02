@@ -132,7 +132,7 @@ public class OrdemServicoService {
 
         if (Boolean.TRUE.equals(request.aprovado())) {
             validarTransicaoStatus(statusAtual, StatusOrdemServico.EM_EXECUCAO);
-            //TO-DO: Lógica de baixa no estoque.
+            baixarEstoqueDasPecas(ordemServico);
             ordemServico.setStatus(StatusOrdemServico.EM_EXECUCAO);
             if (ordemServico.getDataInicioExecucao() == null) {
                 ordemServico.setDataInicioExecucao(LocalDateTime.now());
@@ -243,6 +243,21 @@ public class OrdemServicoService {
         Integer estoqueAtual = peca.getQuantidadeEstoque() == null ? 0 : peca.getQuantidadeEstoque();
         if (estoqueAtual < quantidadeSolicitada) {
             throw new BusinessException("Estoque insuficiente para a peca informada.");
+        }
+    }
+
+    private void baixarEstoqueDasPecas(OrdemServico ordemServico) {
+        List<ItemPecaOrdem> itensPeca = ordemServico.getItensPeca() == null ? Collections.emptyList() : ordemServico.getItensPeca();
+
+        for (ItemPecaOrdem itemPeca : itensPeca) {
+            Peca peca = itemPeca.getPeca();
+            if (peca == null) {
+                throw new BusinessException("Item de peca da ordem sem referencia de peca.");
+            }
+
+            Integer quantidadeSolicitada = itemPeca.getQuantidade() == null ? 0 : itemPeca.getQuantidade();
+            validarEstoqueDisponivel(peca, quantidadeSolicitada);
+            peca.setQuantidadeEstoque(peca.getQuantidadeEstoque() - quantidadeSolicitada);
         }
     }
 

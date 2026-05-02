@@ -356,6 +356,36 @@ class OrdemServicoServiceTest {
     }
 
     @Test
+    void deveBaixarEstoqueDasPecasAoAprovarOrcamento() {
+        OrdemServico ordemServico = criarOrdemServico(100L, StatusOrdemServico.AGUARDANDO_APROVACAO);
+        Peca peca = criarPeca(50L, "Pastilha", "15.00", 10);
+        ordemServico.getItensPeca().add(criarItemPeca(ordemServico, peca, 3));
+        when(ordemServicoRepository.findById(100L)).thenReturn(Optional.of(ordemServico));
+
+        OrdemServico resultado = ordemServicoService.aprovarOrcamento(100L, new AprovarOrcamentoRequest(true));
+
+        assertThat(resultado.getStatus()).isEqualTo(StatusOrdemServico.EM_EXECUCAO);
+        assertThat(peca.getQuantidadeEstoque()).isEqualTo(7);
+        verify(ordemServicoRepository).findById(100L);
+        verify(ordemServicoRepository).save(any(OrdemServico.class));
+    }
+
+    @Test
+    void deveLancarBusinessExceptionQuandoEstoqueInsuficienteAoAprovarOrcamento() {
+        OrdemServico ordemServico = criarOrdemServico(100L, StatusOrdemServico.AGUARDANDO_APROVACAO);
+        Peca peca = criarPeca(50L, "Pastilha", "15.00", 1);
+        ordemServico.getItensPeca().add(criarItemPeca(ordemServico, peca, 2));
+        when(ordemServicoRepository.findById(100L)).thenReturn(Optional.of(ordemServico));
+
+        assertThrows(BusinessException.class,
+                () -> ordemServicoService.aprovarOrcamento(100L, new AprovarOrcamentoRequest(true)));
+
+        assertThat(peca.getQuantidadeEstoque()).isEqualTo(1);
+        verify(ordemServicoRepository).findById(100L);
+        verify(ordemServicoRepository, never()).save(any(OrdemServico.class));
+    }
+
+    @Test
     void deveReprovarOrcamentoQuandoStatusForAguardandoAprovacao() {
         OrdemServico ordemServico = criarOrdemServico(100L, StatusOrdemServico.AGUARDANDO_APROVACAO);
         when(ordemServicoRepository.findById(100L)).thenReturn(Optional.of(ordemServico));
