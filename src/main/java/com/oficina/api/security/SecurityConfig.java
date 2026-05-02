@@ -3,6 +3,7 @@ package com.oficina.api.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -29,6 +30,27 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**", "/public/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+
+                        .requestMatchers("/usuarios/**").hasRole("GERENTE")
+
+                        .requestMatchers(HttpMethod.DELETE, "/clientes/**", "/veiculos/**", "/pecas/**", "/servicos/**").hasRole("GERENTE")
+
+                        .requestMatchers(HttpMethod.POST, "/clientes/**", "/veiculos/**").hasAnyRole("ATENDENTE", "GERENTE")
+                        .requestMatchers(HttpMethod.PUT, "/clientes/**", "/veiculos/**").hasAnyRole("ATENDENTE", "GERENTE")
+                        .requestMatchers(HttpMethod.GET, "/clientes/**", "/veiculos/**").hasAnyRole("ATENDENTE", "GERENTE", "MECANICO")
+
+                        .requestMatchers(HttpMethod.GET, "/pecas/**", "/servicos/**").hasAnyRole("ATENDENTE", "GERENTE", "MECANICO")
+                        .requestMatchers(HttpMethod.POST, "/pecas/**", "/servicos/**").hasAnyRole("GERENTE", "MECANICO")
+                        .requestMatchers(HttpMethod.PUT, "/pecas/**", "/servicos/**").hasAnyRole("GERENTE", "MECANICO")
+                        .requestMatchers(HttpMethod.PATCH, "/pecas/**").hasAnyRole("GERENTE", "MECANICO")
+
+                        .requestMatchers(HttpMethod.GET, "/ordens-servico/**").hasAnyRole("ATENDENTE", "GERENTE", "MECANICO")
+                        .requestMatchers(HttpMethod.POST, "/ordens-servico").hasAnyRole("ATENDENTE", "GERENTE")
+                        .requestMatchers(HttpMethod.POST, "/ordens-servico/*/servicos", "/ordens-servico/*/pecas").hasAnyRole("MECANICO", "GERENTE")
+                        .requestMatchers(HttpMethod.POST, "/ordens-servico/*/enviar-orcamento").hasAnyRole("ATENDENTE", "GERENTE")
+                        .requestMatchers(HttpMethod.PATCH, "/ordens-servico/*/status").hasAnyRole("MECANICO", "GERENTE")
+                        .requestMatchers(HttpMethod.PATCH, "/ordens-servico/*/orcamento").hasAnyRole("ATENDENTE", "GERENTE")
+
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
