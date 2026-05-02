@@ -129,6 +129,7 @@ public class ClienteController {
                 cliente.getTipoPessoa(),
                 cliente.getTelefone(),
                 cliente.getEmail(),
+                cliente.getTokenAcesso(),
                 cliente.getDataCadastro()
         );
     }

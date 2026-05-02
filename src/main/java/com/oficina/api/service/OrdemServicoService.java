@@ -173,6 +173,12 @@ public class OrdemServicoService {
     }
 
     @Transactional(readOnly = true)
+    public List<OrdemServico> listarPorTokenCliente(String tokenAcesso) {
+        Cliente cliente = buscarClientePorTokenOuFalhar(tokenAcesso);
+        return ordemServicoRepository.findByClienteId(cliente.getId());
+    }
+
+    @Transactional(readOnly = true)
     public List<OrdemServico> listarPorVeiculo(Long veiculoId) {
         buscarVeiculoOuFalhar(veiculoId);
         return ordemServicoRepository.findByVeiculoId(veiculoId);
@@ -183,8 +189,21 @@ public class OrdemServicoService {
         return ordemServicoRepository.findByStatus(status);
     }
 
+    @Transactional
+    public OrdemServico aprovarOrcamentoCliente(String tokenAcesso, Long ordemServicoId, AprovarOrcamentoRequest request) {
+        Cliente cliente = buscarClientePorTokenOuFalhar(tokenAcesso);
+        OrdemServico ordemServico = buscarOrdemServicoOuFalhar(ordemServicoId);
+        validarOrdemPertenceAoCliente(ordemServico, cliente);
+        return aprovarOrcamento(ordemServicoId, request);
+    }
+
     private Cliente buscarClienteOuFalhar(Long clienteId) {
         return clienteRepository.findById(clienteId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente nao encontrado."));
+    }
+
+    private Cliente buscarClientePorTokenOuFalhar(String tokenAcesso) {
+        return clienteRepository.findByTokenAcesso(tokenAcesso)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente nao encontrado."));
     }
 
@@ -211,6 +230,12 @@ public class OrdemServicoService {
     private void validarVeiculoDoCliente(Cliente cliente, Veiculo veiculo) {
         if (veiculo.getCliente() == null || !cliente.getId().equals(veiculo.getCliente().getId())) {
             throw new BusinessException("O veiculo informado nao pertence ao cliente.");
+        }
+    }
+
+    private void validarOrdemPertenceAoCliente(OrdemServico ordemServico, Cliente cliente) {
+        if (ordemServico.getCliente() == null || !cliente.getId().equals(ordemServico.getCliente().getId())) {
+            throw new BusinessException("A ordem de servico nao pertence ao cliente informado.");
         }
     }
 
@@ -251,8 +276,13 @@ public class OrdemServicoService {
     }
 
     private void garantirStatusEmDiagnostico(OrdemServico ordemServico) {
-        if (ordemServico.getStatus() != StatusOrdemServico.EM_DIAGNOSTICO) {
+        if (ordemServico.getStatus() == StatusOrdemServico.RECEBIDA) {
             ordemServico.setStatus(StatusOrdemServico.EM_DIAGNOSTICO);
+            return;
+        }
+
+        if (ordemServico.getStatus() != StatusOrdemServico.EM_DIAGNOSTICO) {
+            throw new BusinessException("A ordem de servico deve estar RECEBIDA ou EM_DIAGNOSTICO para adicionar itens.");
         }
     }
 }

@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 @Entity
 @Table(name = "clientes")
@@ -41,6 +42,9 @@ public class Cliente {
     @Column(unique = true)
     private String email;
 
+    @Column(name = "token_acesso", unique = true, length = 36)
+    private String tokenAcesso;
+
     @Column(name = "data_cadastro", nullable = false)
     private LocalDateTime dataCadastro;
 
@@ -53,7 +57,7 @@ public class Cliente {
     public Cliente() {
     }
 
-    public Cliente(Long id, String nome, String cpfCnpj, TipoPessoa tipoPessoa, String telefone, String email,
+    public Cliente(Long id, String nome, String cpfCnpj, TipoPessoa tipoPessoa, String telefone, String email, String tokenAcesso,
                    LocalDateTime dataCadastro, List<Veiculo> veiculos, List<OrdemServico> ordensServico) {
         this.id = id;
         this.nome = nome;
@@ -61,15 +65,24 @@ public class Cliente {
         this.tipoPessoa = tipoPessoa;
         this.telefone = telefone;
         this.email = email;
+        this.tokenAcesso = tokenAcesso;
         this.dataCadastro = dataCadastro;
         this.veiculos = veiculos;
         this.ordensServico = ordensServico;
+    }
+
+    public Cliente(Long id, String nome, String cpfCnpj, TipoPessoa tipoPessoa, String telefone, String email,
+                   LocalDateTime dataCadastro, List<Veiculo> veiculos, List<OrdemServico> ordensServico) {
+        this(id, nome, cpfCnpj, tipoPessoa, telefone, email, null, dataCadastro, veiculos, ordensServico);
     }
 
     @PrePersist
     public void prePersist() {
         if (this.dataCadastro == null) {
             this.dataCadastro = LocalDateTime.now();
+        }
+        if (this.tokenAcesso == null || this.tokenAcesso.isBlank()) {
+            this.tokenAcesso = UUID.randomUUID().toString();
         }
     }
 
@@ -119,6 +132,14 @@ public class Cliente {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getTokenAcesso() {
+        return tokenAcesso;
+    }
+
+    public void setTokenAcesso(String tokenAcesso) {
+        this.tokenAcesso = tokenAcesso;
     }
 
     public LocalDateTime getDataCadastro() {

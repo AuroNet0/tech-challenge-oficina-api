@@ -11,6 +11,7 @@ public record ClienteResponse(
         TipoPessoa tipoPessoa,
         String telefone,
         String email,
+        String tokenAcesso,
         LocalDateTime dataCadastro
 ) {
 }

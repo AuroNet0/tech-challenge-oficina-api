@@ -9,6 +9,8 @@ public interface ClienteRepository extends JpaRepository<Cliente, Long> {
 
     Optional<Cliente> findByCpfCnpj(String cpfCnpj);
 
+    Optional<Cliente> findByTokenAcesso(String tokenAcesso);
+
     boolean existsByCpfCnpj(String cpfCnpj);
 
     boolean existsByEmail(String email);
