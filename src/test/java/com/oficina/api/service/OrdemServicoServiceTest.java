@@ -13,6 +13,7 @@ import com.oficina.api.model.ItemServicoOrdem;
 import com.oficina.api.model.OrdemServico;
 import com.oficina.api.model.Peca;
 import com.oficina.api.model.Servico;
+import com.oficina.api.model.TokenAprovacao;
 import com.oficina.api.model.Veiculo;
 import com.oficina.api.model.enums.StatusOrdemServico;
 import com.oficina.api.model.enums.TipoPessoa;
@@ -58,6 +59,12 @@ class OrdemServicoServiceTest {
 
     @Mock
     private PecaRepository pecaRepository;
+
+    @Mock
+    private TokenAprovacaoService tokenAprovacaoService;
+
+    @Mock
+    private EmailService emailService;
 
     @InjectMocks
     private OrdemServicoService ordemServicoService;
@@ -421,6 +428,37 @@ class OrdemServicoServiceTest {
     }
 
     @Test
+    void deveEnviarOrcamentoGerandoTokenEEnviandoEmail() {
+        OrdemServico ordemServico = criarOrdemServico(100L, StatusOrdemServico.EM_DIAGNOSTICO);
+        TokenAprovacao tokenAprovacao = new TokenAprovacao();
+        tokenAprovacao.setToken("token-abc");
+
+        when(ordemServicoRepository.findById(100L)).thenReturn(Optional.of(ordemServico));
+        when(tokenAprovacaoService.gerarToken(ordemServico)).thenReturn(tokenAprovacao);
+
+        OrdemServico resultado = ordemServicoService.enviarOrcamento(100L);
+
+        assertThat(resultado.getStatus()).isEqualTo(StatusOrdemServico.AGUARDANDO_APROVACAO);
+        verify(ordemServicoRepository).findById(100L);
+        verify(ordemServicoRepository).save(ordemServico);
+        verify(tokenAprovacaoService).gerarToken(ordemServico);
+        verify(emailService).enviarEmailAprovacao(ordemServico, "token-abc");
+    }
+
+    @Test
+    void deveLancarBusinessExceptionQuandoStatusNaoPermitirEnviarOrcamento() {
+        OrdemServico ordemServico = criarOrdemServico(100L, StatusOrdemServico.RECEBIDA);
+        when(ordemServicoRepository.findById(100L)).thenReturn(Optional.of(ordemServico));
+
+        assertThrows(BusinessException.class, () -> ordemServicoService.enviarOrcamento(100L));
+
+        verify(ordemServicoRepository).findById(100L);
+        verify(ordemServicoRepository, never()).save(any(OrdemServico.class));
+        verify(tokenAprovacaoService, never()).gerarToken(any());
+        verify(emailService, never()).enviarEmailAprovacao(any(), any());
+    }
+
+    @Test
     void deveRetornarOsQuandoBuscarPorIdExistente() {
         OrdemServico ordemServico = criarOrdemServico(100L, StatusOrdemServico.RECEBIDA);
         when(ordemServicoRepository.findById(100L)).thenReturn(Optional.of(ordemServico));
@@ -442,15 +480,17 @@ class OrdemServicoServiceTest {
 
     @Test
     void deveRetornarTodasAsOsAoListar() {
+        OrdemServico osRecebida = criarOrdemServico(100L, StatusOrdemServico.RECEBIDA);
+        OrdemServico osEmDiagnostico = criarOrdemServico(101L, StatusOrdemServico.EM_DIAGNOSTICO);
         List<OrdemServico> ordens = List.of(
-                criarOrdemServico(100L, StatusOrdemServico.RECEBIDA),
-                criarOrdemServico(101L, StatusOrdemServico.EM_DIAGNOSTICO)
+                osRecebida,
+                osEmDiagnostico
         );
         when(ordemServicoRepository.findAll()).thenReturn(ordens);
 
         List<OrdemServico> resultado = ordemServicoService.listar();
 
-        assertThat(resultado).hasSize(2).containsExactlyElementsOf(ordens);
+        assertThat(resultado).hasSize(2).containsExactly(osEmDiagnostico, osRecebida);
         verify(ordemServicoRepository).findAll();
     }
 

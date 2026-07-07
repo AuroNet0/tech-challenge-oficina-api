@@ -37,17 +37,23 @@ public class OrdemServicoService {
     private final VeiculoRepository veiculoRepository;
     private final ServicoRepository servicoRepository;
     private final PecaRepository pecaRepository;
+    private final TokenAprovacaoService tokenAprovacaoService;
+    private final EmailService emailService;
 
     public OrdemServicoService(OrdemServicoRepository ordemServicoRepository,
                                ClienteRepository clienteRepository,
                                VeiculoRepository veiculoRepository,
                                ServicoRepository servicoRepository,
-                               PecaRepository pecaRepository) {
+                               PecaRepository pecaRepository,
+                               TokenAprovacaoService tokenAprovacaoService,
+                               EmailService emailService) {
         this.ordemServicoRepository = ordemServicoRepository;
         this.clienteRepository = clienteRepository;
         this.veiculoRepository = veiculoRepository;
         this.servicoRepository = servicoRepository;
         this.pecaRepository = pecaRepository;
+        this.tokenAprovacaoService = tokenAprovacaoService;
+        this.emailService = emailService;
     }
 
     @Transactional
@@ -154,7 +160,10 @@ public class OrdemServicoService {
         }
 
         ordemServico.setStatus(StatusOrdemServico.AGUARDANDO_APROVACAO);
-        return ordemServicoRepository.save(ordemServico);
+        OrdemServico ordemSalva = ordemServicoRepository.save(ordemServico);
+        String token = tokenAprovacaoService.gerarToken(ordemSalva).getToken();
+        emailService.enviarEmailAprovacao(ordemSalva, token);
+        return ordemSalva;
     }
 
     @Transactional(readOnly = true)
