@@ -111,6 +111,8 @@ class OrdemServicoControllerTest {
     void deveListarOrdensComSucesso() throws Exception {
         OrdemServico os1 = criarOrdemServicoCompleta(1L, StatusOrdemServico.RECEBIDA, "170.00");
         OrdemServico os2 = criarOrdemServicoCompleta(2L, StatusOrdemServico.EM_EXECUCAO, "300.00");
+        os2.setDataInicioExecucao(LocalDateTime.of(2026, 4, 25, 10, 0));
+        os2.setDataFinalizacao(LocalDateTime.of(2026, 4, 25, 12, 30));
         when(ordemServicoService.listar()).thenReturn(List.of(os1, os2));
 
         mockMvc.perform(get("/ordens-servico"))
@@ -119,8 +121,10 @@ class OrdemServicoControllerTest {
                 .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].clienteNome").value("Cliente 1"))
                 .andExpect(jsonPath("$[0].status").value("RECEBIDA"))
+                .andExpect(jsonPath("$[0].tempoExecucaoHoras").doesNotExist())
                 .andExpect(jsonPath("$[1].id").value(2))
-                .andExpect(jsonPath("$[1].status").value("EM_EXECUCAO"));
+                .andExpect(jsonPath("$[1].status").value("EM_EXECUCAO"))
+                .andExpect(jsonPath("$[1].tempoExecucaoHoras").value(2.5));
     }
 
     @Test
@@ -177,7 +181,7 @@ class OrdemServicoControllerTest {
     @Test
     void deveListarOrdensPorStatusComSucesso() throws Exception {
         OrdemServico os = criarOrdemServicoCompleta(1L, StatusOrdemServico.FINALIZADA, "170.00");
-        when(ordemServicoService.listarPorStatus(StatusOrdemServico.FINALIZADA)).thenReturn(List.of(os));
+        when(ordemServicoService.listarOsPorStatus(StatusOrdemServico.FINALIZADA)).thenReturn(List.of(os));
 
         mockMvc.perform(get("/ordens-servico/status/{status}", "FINALIZADA"))
                 .andExpect(status().isOk())
@@ -190,6 +194,28 @@ class OrdemServicoControllerTest {
         mockMvc.perform(get("/ordens-servico/status/{status}", "INVALIDO"))
                 .andExpect(status().isInternalServerError())
                 .andExpect(jsonPath("$.status").value(500));
+    }
+
+    @Test
+    void deveListarStatusPorOsComSucesso() throws Exception {
+        OrdemServico ordemServico = criarOrdemServicoCompleta(1L, StatusOrdemServico.AGUARDANDO_APROVACAO, "170.00");
+        when(ordemServicoService.buscarPorId(1L)).thenReturn(ordemServico);
+
+        mockMvc.perform(get("/ordens-servico/{id}/status", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").value("AGUARDANDO_APROVACAO"));
+
+        verify(ordemServicoService).buscarPorId(1L);
+    }
+
+    @Test
+    void deveRetornar404AoListarStatusPorOsQuandoNaoEncontrar() throws Exception {
+        when(ordemServicoService.buscarPorId(99L)).thenThrow(new ResourceNotFoundException("Ordem nao encontrada"));
+
+        mockMvc.perform(get("/ordens-servico/{id}/status", 99L))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Ordem nao encontrada"));
     }
 
     @Test
@@ -338,6 +364,41 @@ class OrdemServicoControllerTest {
                         .content(body))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void deveEnviarOrcamentoComSucesso() throws Exception {
+        OrdemServico ordemServico = criarOrdemServicoCompleta(1L, StatusOrdemServico.AGUARDANDO_APROVACAO, "170.00");
+        when(ordemServicoService.enviarOrcamento(1L)).thenReturn(ordemServico);
+
+        mockMvc.perform(post("/ordens-servico/{id}/enviar-orcamento", 1L))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.status").value("AGUARDANDO_APROVACAO"))
+                .andExpect(jsonPath("$.orcamento.valorTotal").value(170.00));
+
+        verify(ordemServicoService).enviarOrcamento(1L);
+    }
+
+    @Test
+    void deveRetornar400AoEnviarOrcamentoQuandoBusinessException() throws Exception {
+        when(ordemServicoService.enviarOrcamento(1L))
+                .thenThrow(new BusinessException("A ordem de servico deve estar EM_DIAGNOSTICO para envio de orcamento."));
+
+        mockMvc.perform(post("/ordens-servico/{id}/enviar-orcamento", 1L))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("A ordem de servico deve estar EM_DIAGNOSTICO para envio de orcamento."));
+    }
+
+    @Test
+    void deveRetornar404AoEnviarOrcamentoQuandoNaoEncontrar() throws Exception {
+        when(ordemServicoService.enviarOrcamento(99L)).thenThrow(new ResourceNotFoundException("Ordem nao encontrada"));
+
+        mockMvc.perform(post("/ordens-servico/{id}/enviar-orcamento", 99L))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Ordem nao encontrada"));
     }
 
     @Test

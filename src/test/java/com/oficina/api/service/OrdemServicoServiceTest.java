@@ -529,7 +529,7 @@ class OrdemServicoServiceTest {
         );
         when(ordemServicoRepository.findByStatus(StatusOrdemServico.EM_EXECUCAO)).thenReturn(ordens);
 
-        List<OrdemServico> resultado = ordemServicoService.listarPorStatus(StatusOrdemServico.EM_EXECUCAO);
+        List<OrdemServico> resultado = ordemServicoService.listarOsPorStatus(StatusOrdemServico.EM_EXECUCAO);
 
         assertThat(resultado).hasSize(2).containsExactlyElementsOf(ordens);
         verify(ordemServicoRepository).findByStatus(StatusOrdemServico.EM_EXECUCAO);
@@ -539,7 +539,7 @@ class OrdemServicoServiceTest {
     void deveRetornarListaVaziaQuandoNaoHouverOsComStatus() {
         when(ordemServicoRepository.findByStatus(StatusOrdemServico.CANCELADA)).thenReturn(List.of());
 
-        List<OrdemServico> resultado = ordemServicoService.listarPorStatus(StatusOrdemServico.CANCELADA);
+        List<OrdemServico> resultado = ordemServicoService.listarOsPorStatus(StatusOrdemServico.CANCELADA);
 
         assertThat(resultado).isEmpty();
         verify(ordemServicoRepository).findByStatus(StatusOrdemServico.CANCELADA);

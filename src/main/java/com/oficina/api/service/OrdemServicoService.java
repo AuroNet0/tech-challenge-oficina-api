@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -163,7 +164,28 @@ public class OrdemServicoService {
 
     @Transactional(readOnly = true)
     public List<OrdemServico> listar() {
-        return ordemServicoRepository.findAll();
+
+        return ordemServicoRepository.findAll()
+                .stream()
+                .filter(os ->
+                        os.getStatus() != StatusOrdemServico.FINALIZADA &&
+                                os.getStatus() != StatusOrdemServico.ENTREGUE)
+                .sorted(
+                        Comparator
+                                .comparingInt(this::prioridadeStatus)
+                                .thenComparing(OrdemServico::getDataAbertura)
+                )
+                .toList();
+    }
+
+    private int prioridadeStatus(OrdemServico os) {
+        return switch (os.getStatus()) {
+            case EM_EXECUCAO -> 1;
+            case AGUARDANDO_APROVACAO -> 2;
+            case EM_DIAGNOSTICO -> 3;
+            case RECEBIDA -> 4;
+            default -> 5;
+        };
     }
 
     @Transactional(readOnly = true)
@@ -185,7 +207,7 @@ public class OrdemServicoService {
     }
 
     @Transactional(readOnly = true)
-    public List<OrdemServico> listarPorStatus(StatusOrdemServico status) {
+    public List<OrdemServico> listarOsPorStatus(StatusOrdemServico status) {
         return ordemServicoRepository.findByStatus(status);
     }
 

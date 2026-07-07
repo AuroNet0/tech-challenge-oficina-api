@@ -5,11 +5,7 @@ import com.oficina.api.dto.request.ordemservico.AdicionarServicoOrdemRequest;
 import com.oficina.api.dto.request.ordemservico.AprovarOrcamentoRequest;
 import com.oficina.api.dto.request.ordemservico.AtualizarStatusOrdemServicoRequest;
 import com.oficina.api.dto.request.ordemservico.CriarOrdemServicoRequest;
-import com.oficina.api.dto.response.ordemservico.ItemPecaOrdemResponse;
-import com.oficina.api.dto.response.ordemservico.ItemServicoOrdemResponse;
-import com.oficina.api.dto.response.ordemservico.OrcamentoResponse;
-import com.oficina.api.dto.response.ordemservico.OrdemServicoResponse;
-import com.oficina.api.dto.response.ordemservico.OrdemServicoResumoResponse;
+import com.oficina.api.dto.response.ordemservico.*;
 import com.oficina.api.model.ItemPecaOrdem;
 import com.oficina.api.model.ItemServicoOrdem;
 import com.oficina.api.model.OrdemServico;
@@ -110,9 +106,22 @@ public class OrdemServicoController {
             @ApiResponse(responseCode = "401", description = "Não autenticado"),
             @ApiResponse(responseCode = "403", description = "Acesso negado")
     })
-    public ResponseEntity<List<OrdemServicoResumoResponse>> listarPorStatus(@PathVariable StatusOrdemServico status) {
-        List<OrdemServico> ordens = ordemServicoService.listarPorStatus(status);
+    public ResponseEntity<List<OrdemServicoResumoResponse>>listarOsPorStatus(@PathVariable StatusOrdemServico status) {
+        List<OrdemServico> ordens = ordemServicoService.listarOsPorStatus(status);
         return ResponseEntity.ok(toResumoResponseList(ordens));
+    }
+
+    @GetMapping("/{id}/status")
+    @Operation(summary = "Listar Status por OS", description = "Retorna o status de uma ordem de serviço.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Operação realizada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Dados inválidos ou regra de negócio violada"),
+            @ApiResponse(responseCode = "401", description = "Não autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado")
+    })
+    public ResponseEntity<StatusOrdemServico> listarStatusPorOS(@PathVariable Long id) {
+        OrdemServico ordem = ordemServicoService.buscarPorId(id);
+        return ResponseEntity.ok(ordem.getStatus());
     }
 
     @PostMapping
