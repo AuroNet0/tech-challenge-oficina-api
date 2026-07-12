@@ -21,6 +21,7 @@ Centralizar o fluxo operacional da oficina e permitir:
 
 ### Docker Compose
 ```bash
+# copie .env.example para .env e ajuste os valores
 docker compose up --build
 ```
 
@@ -38,7 +39,7 @@ Swagger: `http://localhost:8080/swagger-ui.html`
 
 ## Banco e carga inicial
 
-- `spring.jpa.hibernate.ddl-auto=create`: recria schema ao subir a aplicacao.
+- `spring.jpa.hibernate.ddl-auto=create` no Compose de desenvolvimento: recria schema ao subir a aplicacao.
 - `data.sql`: insere 3 usuarios padrao para login:
   - `atendente@oficina.com` (`ATENDENTE`)
   - `mecanico@oficina.com` (`MECANICO`)
@@ -79,11 +80,27 @@ Regras principais:
 
 ## Variaveis de ambiente principais
 
-- `SPRING_DATASOURCE_URL`
-- `SPRING_DATASOURCE_USERNAME`
-- `SPRING_DATASOURCE_PASSWORD`
-- `SPRING_JPA_HIBERNATE_DDL_AUTO` (default atual: `create`)
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
 - `JWT_SECRET`
+- `SPRING_MAIL_USERNAME`
+- `SPRING_MAIL_PASSWORD`
+- `APP_MAIL_FROM`
+- `APP_PUBLIC_BASE_URL`
+
+### Exemplo de configuracao
+
+```env
+POSTGRES_DB=oficina_db
+POSTGRES_USER=oficina_user
+POSTGRES_PASSWORD=troque-esta-senha
+JWT_SECRET=troque-este-jwt-secret
+SPRING_MAIL_USERNAME=
+SPRING_MAIL_PASSWORD=
+APP_MAIL_FROM=
+APP_PUBLIC_BASE_URL=http://localhost:8080
+```
 
 ## Testes e build
 

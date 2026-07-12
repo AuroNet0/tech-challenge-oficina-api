@@ -1,20 +1,33 @@
-FROM maven:3.9.6-eclipse-temurin-21 AS build
+FROM maven:3.9.6-eclipse-temurin-21 AS base
 
-WORKDIR /app
+WORKDIR /workspace
 
-COPY pom.xml .
-RUN mvn dependency:go-offline -B
+COPY pom.xml mvnw ./
+COPY .mvn ./.mvn
+
+
+FROM base AS deps
+
+RUN mvn dependency:go-offline -DskipTests -B
+
+
+FROM deps AS build
 
 COPY src ./src
 
 RUN mvn package -DskipTests -B
 
 
-FROM eclipse-temurin:21-jre-alpine
+FROM deps AS development
+
+CMD ["mvn", "spring-boot:run"]
+
+
+FROM eclipse-temurin:21-jre-alpine AS runtime
 
 WORKDIR /app
 
-COPY --from=build /app/target/*.jar app.jar
+COPY --from=build /workspace/target/*.jar app.jar
 
 EXPOSE 8080
 

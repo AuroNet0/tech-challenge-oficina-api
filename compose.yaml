@@ -1,14 +1,13 @@
 services:
-
   db:
     image: postgres:15-alpine
     container_name: oficina_db
     restart: unless-stopped
 
     environment:
-      POSTGRES_DB: oficina_db
-      POSTGRES_USER: oficina_user
-      POSTGRES_PASSWORD: oficina_pass
+      POSTGRES_DB: ${POSTGRES_DB:-localhost}
+      POSTGRES_USER: ${POSTGRES_USER:-localhost}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-localhost}
 
     ports:
       - "5432:5432"
@@ -26,19 +25,31 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+      target: development
 
     container_name: oficina_app
     restart: unless-stopped
+    working_dir: /workspace
+    command: mvn spring-boot:run
 
     ports:
       - "8080:8080"
 
+    volumes:
+      - .:/workspace
+      - maven_cache:/root/.m2
+
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/oficina_db
-      SPRING_DATASOURCE_USERNAME: oficina_user
-      SPRING_DATASOURCE_PASSWORD: oficina_pass
-      SPRING_JPA_HIBERNATE_DDL_AUTO: update
-      JWT_SECRET: minha-chave-secreta
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-oficina_db}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-oficina_user}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-localhost}
+      SPRING_JPA_HIBERNATE_DDL_AUTO: create
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
+      JWT_SECRET: ${JWT_SECRET:-localhost}
+      SPRING_MAIL_USERNAME: ${SPRING_MAIL_USERNAME:-localhost}
+      SPRING_MAIL_PASSWORD: ${SPRING_MAIL_PASSWORD:-localhost}
+      APP_MAIL_FROM: ${APP_MAIL_FROM:-localhost}
+      APP_PUBLIC_BASE_URL: ${APP_PUBLIC_BASE_URL:-http://localhost:8080}
 
     depends_on:
       db:
@@ -46,3 +57,4 @@ services:
 
 volumes:
   postgres_data:
+  maven_cache:

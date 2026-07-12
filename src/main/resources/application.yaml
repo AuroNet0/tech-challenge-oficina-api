@@ -23,8 +23,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${SPRING_MAIL_USERNAME:arnetoapi@gmail.com}
-    password: ${SPRING_MAIL_PASSWORD:vqdh sggf rhgi vfxc}
+    username: ${SPRING_MAIL_USERNAME:}
+    password: ${SPRING_MAIL_PASSWORD:}
     properties:
       mail:
         smtp:
@@ -34,13 +34,13 @@ spring:
 
 
 jwt:
-  secret: ${JWT_SECRET:minha-chave-secreta}
+  secret: ${JWT_SECRET}
   expiration: 86400000
 
 app:
   public-base-url: ${APP_PUBLIC_BASE_URL:http://localhost:8080}
   mail:
-    from: ${APP_MAIL_FROM:arnetoapi@gmail.com}
+    from: ${APP_MAIL_FROM:}
 
 springdoc:
   swagger-ui:
