@@ -1,8 +1,5 @@
 package com.oficina.api.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.oficina.api.dto.request.ordemservico.AprovarOrcamentoRequest;
 import com.oficina.api.exception.GlobalExceptionHandler;
 import com.oficina.api.model.Cliente;
 import com.oficina.api.model.OrdemServico;
@@ -15,7 +12,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -25,11 +21,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.hamcrest.Matchers.hasSize;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -37,7 +30,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class OrdemServicoPublicControllerTest {
 
     private MockMvc mockMvc;
-    private ObjectMapper objectMapper;
 
     @Mock
     private OrdemServicoService ordemServicoService;
@@ -47,10 +39,6 @@ class OrdemServicoPublicControllerTest {
 
     @BeforeEach
     void setUp() {
-        objectMapper = new ObjectMapper()
-                .findAndRegisterModules()
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
         LocalValidatorFactoryBean validator = new LocalValidatorFactoryBean();
         validator.afterPropertiesSet();
 
@@ -70,20 +58,6 @@ class OrdemServicoPublicControllerTest {
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].clienteNome").value("Cliente 1"));
-    }
-
-    @Test
-    void deveAprovarOrcamentoPublicoComSucesso() throws Exception {
-        when(ordemServicoService.aprovarOrcamentoCliente(eq("token-abc"), eq(1L), any(AprovarOrcamentoRequest.class)))
-                .thenReturn(criarOrdemServico(1L));
-
-        mockMvc.perform(patch("/public/ordens-servico/{id}/orcamento", 1L)
-                        .param("token", "token-abc")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new AprovarOrcamentoRequest(true))))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.id").value(1))
-                .andExpect(jsonPath("$.status").value("RECEBIDA"));
     }
 
     private OrdemServico criarOrdemServico(Long id) {

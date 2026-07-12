@@ -162,10 +162,30 @@ class OrdemServicoServiceTest {
         assertThat(novoItem.getValor()).isEqualByComparingTo("80.00");
         assertThat(novoItem.getObservacao()).isEqualTo("Executar com prioridade");
         assertThat(resultado.getValorTotal()).isEqualByComparingTo("150.00");
+        assertThat(resultado.getStatus()).isEqualTo(StatusOrdemServico.EM_DIAGNOSTICO);
 
         verify(ordemServicoRepository).findById(100L);
         verify(servicoRepository).findById(20L);
         verify(ordemServicoRepository).save(any(OrdemServico.class));
+        verify(emailService).enviarAtualizacaoStatus(ordemServico);
+    }
+
+    @Test
+    void naoDeveEnviarEmailAoAdicionarServicoQuandoOsJaEstaEmDiagnostico() {
+        OrdemServico ordemServico = criarOrdemServico(100L, StatusOrdemServico.EM_DIAGNOSTICO);
+        Servico servico = criarServico(20L, "Alinhamento", "80.00");
+
+        when(ordemServicoRepository.findById(100L)).thenReturn(Optional.of(ordemServico));
+        when(servicoRepository.findById(20L)).thenReturn(Optional.of(servico));
+
+        OrdemServico resultado = ordemServicoService.adicionarServico(
+                100L,
+                new AdicionarServicoOrdemRequest(20L, "Executar com prioridade")
+        );
+
+        assertThat(resultado.getStatus()).isEqualTo(StatusOrdemServico.EM_DIAGNOSTICO);
+        verify(ordemServicoRepository).save(ordemServico);
+        verify(emailService, never()).enviarAtualizacaoStatus(any());
     }
 
     @Test
@@ -233,6 +253,22 @@ class OrdemServicoServiceTest {
         verify(ordemServicoRepository).findById(100L);
         verify(pecaRepository).findById(50L);
         verify(ordemServicoRepository).save(any(OrdemServico.class));
+        verify(emailService, never()).enviarAtualizacaoStatus(any());
+    }
+
+    @Test
+    void deveEnviarEmailAoAdicionarPecaQuandoOsMudarParaEmDiagnostico() {
+        OrdemServico ordemServico = criarOrdemServico(100L, StatusOrdemServico.RECEBIDA);
+        Peca peca = criarPeca(50L, "Pastilha", "15.00", 10);
+
+        when(ordemServicoRepository.findById(100L)).thenReturn(Optional.of(ordemServico));
+        when(pecaRepository.findById(50L)).thenReturn(Optional.of(peca));
+
+        OrdemServico resultado = ordemServicoService.adicionarPeca(100L, new AdicionarPecaOrdemRequest(50L, 2));
+
+        assertThat(resultado.getStatus()).isEqualTo(StatusOrdemServico.EM_DIAGNOSTICO);
+        verify(ordemServicoRepository).save(ordemServico);
+        verify(emailService).enviarAtualizacaoStatus(ordemServico);
     }
 
     @Test
@@ -319,6 +355,7 @@ class OrdemServicoServiceTest {
 
         verify(ordemServicoRepository).findById(100L);
         verify(ordemServicoRepository).save(any(OrdemServico.class));
+        verify(emailService).enviarAtualizacaoStatus(ordemServico);
     }
 
     @Test
@@ -360,6 +397,7 @@ class OrdemServicoServiceTest {
         assertThat(resultado.getStatus()).isEqualTo(StatusOrdemServico.EM_EXECUCAO);
         verify(ordemServicoRepository).findById(100L);
         verify(ordemServicoRepository).save(any(OrdemServico.class));
+        verify(emailService).enviarAtualizacaoStatus(ordemServico);
     }
 
     @Test
@@ -375,6 +413,7 @@ class OrdemServicoServiceTest {
         assertThat(peca.getQuantidadeEstoque()).isEqualTo(7);
         verify(ordemServicoRepository).findById(100L);
         verify(ordemServicoRepository).save(any(OrdemServico.class));
+        verify(emailService).enviarAtualizacaoStatus(ordemServico);
     }
 
     @Test
@@ -390,6 +429,7 @@ class OrdemServicoServiceTest {
         assertThat(peca.getQuantidadeEstoque()).isEqualTo(1);
         verify(ordemServicoRepository).findById(100L);
         verify(ordemServicoRepository, never()).save(any(OrdemServico.class));
+        verify(emailService, never()).enviarAtualizacaoStatus(any());
     }
 
     @Test
@@ -402,6 +442,7 @@ class OrdemServicoServiceTest {
         assertThat(resultado.getStatus()).isEqualTo(StatusOrdemServico.CANCELADA);
         verify(ordemServicoRepository).findById(100L);
         verify(ordemServicoRepository).save(any(OrdemServico.class));
+        verify(emailService).enviarAtualizacaoStatus(ordemServico);
     }
 
     @Test
@@ -414,6 +455,7 @@ class OrdemServicoServiceTest {
 
         verify(ordemServicoRepository).findById(100L);
         verify(ordemServicoRepository, never()).save(any(OrdemServico.class));
+        verify(emailService, never()).enviarAtualizacaoStatus(any());
     }
 
     @Test
@@ -425,6 +467,7 @@ class OrdemServicoServiceTest {
 
         verify(ordemServicoRepository).findById(100L);
         verify(ordemServicoRepository, never()).save(any(OrdemServico.class));
+        verify(emailService, never()).enviarAtualizacaoStatus(any());
     }
 
     @Test
@@ -595,6 +638,11 @@ class OrdemServicoServiceTest {
         assertThat(resultado.getStatus()).isEqualTo(novoStatus);
         verify(ordemServicoRepository).findById(100L);
         verify(ordemServicoRepository).save(any(OrdemServico.class));
+        if (deveNotificarStatus(novoStatus)) {
+            verify(emailService).enviarAtualizacaoStatus(ordemServico);
+        } else {
+            verify(emailService, never()).enviarAtualizacaoStatus(any());
+        }
     }
 
     private Cliente criarCliente(Long id) {
@@ -605,6 +653,13 @@ class OrdemServicoServiceTest {
         cliente.setCpfCnpj("1234567890" + id);
         cliente.setTelefone("11999999999");
         return cliente;
+    }
+
+    private boolean deveNotificarStatus(StatusOrdemServico status) {
+        return status == StatusOrdemServico.EM_DIAGNOSTICO
+                || status == StatusOrdemServico.EM_EXECUCAO
+                || status == StatusOrdemServico.FINALIZADA
+                || status == StatusOrdemServico.CANCELADA;
     }
 
     private Veiculo criarVeiculo(Long id, Cliente cliente) {

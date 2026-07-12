@@ -77,6 +77,7 @@ public class OrdemServicoService {
     @Transactional
     public OrdemServico adicionarServico(Long ordemServicoId, AdicionarServicoOrdemRequest request) {
         OrdemServico ordemServico = buscarOrdemServicoOuFalhar(ordemServicoId);
+        StatusOrdemServico statusAnterior = ordemServico.getStatus();
         garantirStatusEmDiagnostico(ordemServico);
         Servico servico = buscarServicoOuFalhar(request.servicoId());
 
@@ -89,12 +90,15 @@ public class OrdemServicoService {
         ordemServico.getItensServico().add(itemServico);
         recalcularValorTotal(ordemServico);
 
-        return ordemServicoRepository.save(ordemServico);
+        OrdemServico ordemSalva = ordemServicoRepository.save(ordemServico);
+        notificarSeStatusMudou(statusAnterior, ordemSalva);
+        return ordemSalva;
     }
 
     @Transactional
     public OrdemServico adicionarPeca(Long ordemServicoId, AdicionarPecaOrdemRequest request) {
         OrdemServico ordemServico = buscarOrdemServicoOuFalhar(ordemServicoId);
+        StatusOrdemServico statusAnterior = ordemServico.getStatus();
         garantirStatusEmDiagnostico(ordemServico);
         Peca peca = buscarPecaOuFalhar(request.pecaId());
 
@@ -109,7 +113,9 @@ public class OrdemServicoService {
         ordemServico.getItensPeca().add(itemPeca);
         recalcularValorTotal(ordemServico);
 
-        return ordemServicoRepository.save(ordemServico);
+        OrdemServico ordemSalva = ordemServicoRepository.save(ordemServico);
+        notificarSeStatusMudou(statusAnterior, ordemSalva);
+        return ordemSalva;
     }
 
     @Transactional
@@ -125,7 +131,9 @@ public class OrdemServicoService {
             ordemServico.setDataFinalizacao(LocalDateTime.now());
         }
 
-        return ordemServicoRepository.save(ordemServico);
+        OrdemServico ordemSalva = ordemServicoRepository.save(ordemServico);
+        notificarAtualizacaoStatus(ordemSalva);
+        return ordemSalva;
     }
 
     @Transactional
@@ -148,7 +156,9 @@ public class OrdemServicoService {
             ordemServico.setStatus(StatusOrdemServico.CANCELADA);
         }
 
-        return ordemServicoRepository.save(ordemServico);
+        OrdemServico ordemSalva = ordemServicoRepository.save(ordemServico);
+        notificarAtualizacaoStatus(ordemSalva);
+        return ordemSalva;
     }
 
     @Transactional
@@ -220,14 +230,6 @@ public class OrdemServicoService {
         return ordemServicoRepository.findByStatus(status);
     }
 
-    @Transactional
-    public OrdemServico aprovarOrcamentoCliente(String tokenAcesso, Long ordemServicoId, AprovarOrcamentoRequest request) {
-        Cliente cliente = buscarClientePorTokenOuFalhar(tokenAcesso);
-        OrdemServico ordemServico = buscarOrdemServicoOuFalhar(ordemServicoId);
-        validarOrdemPertenceAoCliente(ordemServico, cliente);
-        return aprovarOrcamento(ordemServicoId, request);
-    }
-
     private Cliente buscarClienteOuFalhar(Long clienteId) {
         return clienteRepository.findById(clienteId)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente nao encontrado."));
@@ -261,12 +263,6 @@ public class OrdemServicoService {
     private void validarVeiculoDoCliente(Cliente cliente, Veiculo veiculo) {
         if (veiculo.getCliente() == null || !cliente.getId().equals(veiculo.getCliente().getId())) {
             throw new BusinessException("O veiculo informado nao pertence ao cliente.");
-        }
-    }
-
-    private void validarOrdemPertenceAoCliente(OrdemServico ordemServico, Cliente cliente) {
-        if (ordemServico.getCliente() == null || !cliente.getId().equals(ordemServico.getCliente().getId())) {
-            throw new BusinessException("A ordem de servico nao pertence ao cliente informado.");
         }
     }
 
@@ -319,6 +315,22 @@ public class OrdemServicoService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         ordemServico.setValorTotal(totalServicos.add(totalPecas));
+    }
+
+    private void notificarAtualizacaoStatus(OrdemServico ordemServico) {
+        StatusOrdemServico status = ordemServico.getStatus();
+        if (status == StatusOrdemServico.EM_DIAGNOSTICO
+                || status == StatusOrdemServico.EM_EXECUCAO
+                || status == StatusOrdemServico.FINALIZADA
+                || status == StatusOrdemServico.CANCELADA) {
+            emailService.enviarAtualizacaoStatus(ordemServico);
+        }
+    }
+
+    private void notificarSeStatusMudou(StatusOrdemServico statusAnterior, OrdemServico ordemServico) {
+        if (statusAnterior != ordemServico.getStatus()) {
+            notificarAtualizacaoStatus(ordemServico);
+        }
     }
 
     private void garantirStatusEmDiagnostico(OrdemServico ordemServico) {

@@ -1,7 +1,5 @@
 package com.oficina.api.controller;
 
-import com.oficina.api.dto.request.ordemservico.AprovarOrcamentoRequest;
-import com.oficina.api.dto.response.ordemservico.OrdemServicoResponse;
 import com.oficina.api.dto.response.ordemservico.OrdemServicoResumoResponse;
 import com.oficina.api.model.OrdemServico;
 import com.oficina.api.service.OrdemServicoService;
@@ -9,13 +7,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,7 +23,7 @@ import java.util.List;
 @RestController
 @Validated
 @RequestMapping("/public/ordens-servico")
-@Tag(name = "Acompanhamento do Cliente", description = "Consulta de status e aprovacao de orcamento pelo cliente")
+@Tag(name = "Acompanhamento do Cliente", description = "Consulta de status pelo cliente")
 public class OrdemServicoPublicController {
 
     private final OrdemServicoService ordemServicoService;
@@ -52,20 +46,6 @@ public class OrdemServicoPublicController {
         return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("/{id}/orcamento")
-    @Operation(summary = "Aprovar ou reprovar orcamento", description = "Registra a decisao do cliente para a ordem de servico usando token de acesso.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Operacao realizada com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Dados invalidos ou regra de negocio violada"),
-            @ApiResponse(responseCode = "404", description = "Recurso nao encontrado")
-    })
-    public ResponseEntity<OrdemServicoResponse> aprovarOrcamento(@PathVariable Long id,
-                                                                 @RequestParam String token,
-                                                                 @Valid @RequestBody AprovarOrcamentoRequest request) {
-        OrdemServico ordemServico = ordemServicoService.aprovarOrcamentoCliente(token, id, request);
-        return ResponseEntity.ok(toResponse(ordemServico));
-    }
-
     private OrdemServicoResumoResponse toResumoResponse(OrdemServico ordemServico) {
         return new OrdemServicoResumoResponse(
                 ordemServico.getId(),
@@ -75,24 +55,6 @@ public class OrdemServicoPublicController {
                 ordemServico.getDataAbertura(),
                 nullSafe(ordemServico.getValorTotal()),
                 calcularTempoExecucaoHoras(ordemServico)
-        );
-    }
-
-    private OrdemServicoResponse toResponse(OrdemServico ordemServico) {
-        return new OrdemServicoResponse(
-                ordemServico.getId(),
-                ordemServico.getCliente() != null ? ordemServico.getCliente().getId() : null,
-                ordemServico.getCliente() != null ? ordemServico.getCliente().getNome() : null,
-                ordemServico.getVeiculo() != null ? ordemServico.getVeiculo().getId() : null,
-                ordemServico.getVeiculo() != null ? ordemServico.getVeiculo().getPlaca() : null,
-                ordemServico.getStatus(),
-                ordemServico.getDataAbertura(),
-                ordemServico.getDataFinalizacao(),
-                nullSafe(ordemServico.getValorTotal()),
-                ordemServico.getObservacoes(),
-                Collections.emptyList(),
-                Collections.emptyList(),
-                null
         );
     }
 
