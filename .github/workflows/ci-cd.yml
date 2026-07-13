@@ -11,6 +11,9 @@ on:
 jobs:
   build-test-deploy:
     runs-on: ubuntu-latest
+    env:
+      JWT_SECRET: ci-jwt-secret
+      SPRING_DOCKER_COMPOSE_ENABLED: "false"
 
     steps:
       - name: Checkout repository
