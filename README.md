@@ -153,3 +153,34 @@ Swagger: `http://localhost:8080/swagger-ui.html`
 - O `HPA` depende do `metrics-server` instalado no cluster.
 - Em ambiente local com `kind`, os manifestos podem ser aplicados normalmente mesmo sem a API de metricas estar disponivel. Nesse caso, o `kubectl top pods` retorna `Metrics API not available` e o HPA aparece com `cpu: <unknown>` e `memory: <unknown>`, sem invalidar os manifests entregues.
 - Para manter a solucao simples, o PostgreSQL foi definido com `Deployment` e `Service`. Em ambiente real, o mais adequado seria usar persistencia e, em geral, `StatefulSet`.
+
+## Infraestrutura como Codigo
+
+Os scripts Terraform estao em [infra](</C:/Users/arneto/OneDrive - Padtec/Área de Trabalho/Tech Challenge/api/infra>) e fazem:
+
+- provisionamento do cluster Kubernetes local com `kind`
+- build da imagem Docker da API
+- carga da imagem Docker da API no cluster `kind`
+- instalacao automatica do `metrics-server` para suportar o HPA no `kind`
+- aplicacao dos manifests Kubernetes do projeto
+- provisionamento do banco PostgreSQL dentro do cluster por meio do manifesto `k8s/postgres.yaml`
+
+### Aplicacao
+
+```bash
+cd infra
+terraform init
+terraform apply
+```
+
+### Recursos criados
+
+- cluster Kubernetes local `kind`
+- build da imagem Docker da API
+- carga da imagem Docker da API no cluster
+- instalacao do `metrics-server`
+- `ConfigMap`
+- `Secret`
+- `Deployment` e `Service` do PostgreSQL
+- `Deployment` e `Service` da API
+- `HorizontalPodAutoscaler`
