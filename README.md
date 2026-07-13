@@ -122,10 +122,26 @@ Os manifestos simples para K8s estao em [k8s](<https://github.com/AuroNet0/tech-
 - `api.yaml`
 - `hpa.yaml`
 
+### Exemplo local com `kind`
+
+Antes de aplicar os manifestos, suba um cluster local:
+
+```bash
+kind create cluster --name oficina-cluster --image kindest/node:v1.33.1 --config infra/kind-config.yaml
+```
+
 ### Build da imagem
 
 ```bash
 docker build --target runtime -t api-oficina:latest .
+```
+
+### Carga da imagem no cluster
+
+Como o manifesto da API usa a imagem local `api-oficina:latest`, em ambiente `kind` e preciso carregar a imagem para dentro do cluster:
+
+```bash
+kind load docker-image api-oficina:latest --name oficina-cluster
 ```
 
 ### Aplicacao dos manifestos
@@ -136,6 +152,10 @@ kubectl apply -f k8s/secret.yaml
 kubectl apply -f k8s/postgres.yaml
 kubectl apply -f k8s/api.yaml
 kubectl apply -f k8s/hpa.yaml
+```
+### Ou
+```bash
+kubectl apply -f k8s/
 ```
 
 ### Acesso local
@@ -150,6 +170,7 @@ Swagger: `http://localhost:8080/swagger-ui.html`
 ### Observacoes
 
 - Antes do deploy, ajuste os valores em `k8s/secret.yaml`.
+- Se voce estiver usando outro cluster Kubernetes, publique a imagem em um registry acessivel pelo cluster e ajuste o campo `image` em `k8s/api.yaml` se necessario. O passo de `kind load docker-image` vale apenas para `kind`.
 - O `HPA` depende do `metrics-server` instalado no cluster.
 - Em ambiente local com `kind`, os manifestos podem ser aplicados normalmente mesmo sem a API de metricas estar disponivel. Nesse caso, o `kubectl top pods` retorna `Metrics API not available` e o HPA aparece com `cpu: <unknown>` e `memory: <unknown>`, sem invalidar os manifests entregues.
 - Para manter a solucao simples, o PostgreSQL foi definido com `Deployment` e `Service`. Em ambiente real, o mais adequado seria usar persistencia e, em geral, `StatefulSet`.

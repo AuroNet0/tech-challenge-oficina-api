@@ -41,13 +41,13 @@ spec:
                   key: APP_PUBLIC_BASE_URL
             - name: APP_MAIL_FROM
               valueFrom:
-                configMapKeyRef:
-                  name: oficina-config
+                secretKeyRef:
+                  name: oficina-secrets
                   key: APP_MAIL_FROM
             - name: SPRING_MAIL_USERNAME
               valueFrom:
-                configMapKeyRef:
-                  name: oficina-config
+                secretKeyRef:
+                  name: oficina-secrets
                   key: SPRING_MAIL_USERNAME
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
