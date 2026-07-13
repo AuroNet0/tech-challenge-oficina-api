@@ -111,3 +111,45 @@ APP_PUBLIC_BASE_URL=http://localhost:8080
 # build
 .\mvnw.cmd clean package
 ```
+
+## Kubernetes
+
+Os manifestos simples para K8s estao em [k8s](</C:/Users/arneto/OneDrive - Padtec/Área de Trabalho/Tech Challenge/api/k8s>):
+
+- `configmap.yaml`
+- `secret.yaml`
+- `postgres.yaml`
+- `api.yaml`
+- `hpa.yaml`
+
+### Build da imagem
+
+```bash
+docker build --target runtime -t api-oficina:latest .
+```
+
+### Aplicacao dos manifestos
+
+```bash
+kubectl apply -f k8s/configmap.yaml
+kubectl apply -f k8s/secret.yaml
+kubectl apply -f k8s/postgres.yaml
+kubectl apply -f k8s/api.yaml
+kubectl apply -f k8s/hpa.yaml
+```
+
+### Acesso local
+
+```bash
+kubectl port-forward service/oficina-api 8080:8080
+```
+
+API: `http://localhost:8080`  
+Swagger: `http://localhost:8080/swagger-ui.html`
+
+### Observacoes
+
+- Antes do deploy, ajuste os valores em `k8s/secret.yaml`.
+- O `HPA` depende do `metrics-server` instalado no cluster.
+- Em ambiente local com `kind`, os manifestos podem ser aplicados normalmente mesmo sem a API de metricas estar disponivel. Nesse caso, o `kubectl top pods` retorna `Metrics API not available` e o HPA aparece com `cpu: <unknown>` e `memory: <unknown>`, sem invalidar os manifests entregues.
+- Para manter a solucao simples, o PostgreSQL foi definido com `Deployment` e `Service`. Em ambiente real, o mais adequado seria usar persistencia e, em geral, `StatefulSet`.
