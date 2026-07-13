@@ -114,7 +114,7 @@ APP_PUBLIC_BASE_URL=http://localhost:8080
 
 ## Kubernetes
 
-Os manifestos simples para K8s estao em [k8s](</C:/Users/arneto/OneDrive - Padtec/Área de Trabalho/Tech Challenge/api/k8s>):
+Os manifestos simples para K8s estao em [k8s](<https://github.com/AuroNet0/tech-challenge-oficina/tree/master/k8s>):
 
 - `configmap.yaml`
 - `secret.yaml`
