@@ -184,3 +184,18 @@ terraform apply
 - `Deployment` e `Service` do PostgreSQL
 - `Deployment` e `Service` da API
 - `HorizontalPodAutoscaler`
+
+## CI/CD
+
+A pipeline de CI/CD foi configurada com GitHub Actions em [`.github/workflows/ci-cd.yml`](</C:/Users/arneto/OneDrive - Padtec/Área de Trabalho/Tech Challenge/api/.github/workflows/ci-cd.yml>).
+
+Ela executa:
+
+- build da aplicacao com Maven
+- testes automatizados
+- build da imagem Docker
+- criacao de cluster Kubernetes temporario com `kind`
+- instalacao do `metrics-server`
+- deploy do banco de dados
+- aplicacao dos manifests YAML do Kubernetes
+- validacao basica do deploy com `kubectl get` e `kubectl rollout status`

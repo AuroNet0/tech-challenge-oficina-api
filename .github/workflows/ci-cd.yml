@@ -1,0 +1,82 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Run automated tests
+        run: ./mvnw -B test
+
+      - name: Build application package
+        run: ./mvnw -B clean package -DskipTests
+
+      - name: Build Docker image
+        run: docker build --target runtime -t api-oficina:latest .
+
+      - name: Install kind
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.30.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+      - name: Install kubectl
+        run: |
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          sudo mv kubectl /usr/local/bin/kubectl
+
+      - name: Create kind cluster
+        run: kind create cluster --name oficina-ci --config infra/kind-config.yaml --image kindest/node:v1.33.1
+
+      - name: Load Docker image into kind
+        run: kind load docker-image api-oficina:latest --name oficina-ci
+
+      - name: Install metrics-server for kind
+        run: |
+          kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+          kubectl patch deployment metrics-server -n kube-system --type='strategic' -p '{"spec":{"template":{"spec":{"containers":[{"name":"metrics-server","args":["--cert-dir=/tmp","--secure-port=10250","--kubelet-preferred-address-types=InternalIP,ExternalIP,Hostname","--kubelet-use-node-status-port","--metric-resolution=15s","--kubelet-insecure-tls"]}]}}}}'
+          kubectl rollout status deployment/metrics-server -n kube-system --timeout=180s
+
+      - name: Apply shared configuration
+        run: |
+          kubectl apply -f k8s/configmap.yaml
+          kubectl apply -f k8s/secret.yaml
+
+      - name: Deploy database
+        run: kubectl apply -f k8s/postgres.yaml
+
+      - name: Apply Kubernetes manifests
+        run: |
+          kubectl apply -f k8s/api.yaml
+          kubectl apply -f k8s/hpa.yaml
+
+      - name: Wait for deployments
+        run: |
+          kubectl rollout status deployment/oficina-db --timeout=180s
+          kubectl rollout status deployment/oficina-api --timeout=180s
+
+      - name: Validate cluster resources
+        run: |
+          kubectl get pods -A
+          kubectl get svc
+          kubectl get hpa
+          kubectl top pods || true
