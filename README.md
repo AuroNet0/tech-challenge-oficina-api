@@ -156,7 +156,7 @@ Swagger: `http://localhost:8080/swagger-ui.html`
 
 ## Infraestrutura como Codigo
 
-Os scripts Terraform estao em [infra](</C:/Users/arneto/OneDrive - Padtec/Área de Trabalho/Tech Challenge/api/infra>) e fazem:
+Os scripts Terraform estao em [infra](<https://github.com/AuroNet0/tech-challenge-oficina/tree/master/infra>) e fazem:
 
 - provisionamento do cluster Kubernetes local com `kind`
 - build da imagem Docker da API
@@ -187,7 +187,7 @@ terraform apply
 
 ## CI/CD
 
-A pipeline de CI/CD foi configurada com GitHub Actions em [`.github/workflows/ci-cd.yml`](</C:/Users/arneto/OneDrive - Padtec/Área de Trabalho/Tech Challenge/api/.github/workflows/ci-cd.yml>).
+A pipeline de CI/CD foi configurada com GitHub Actions em [`.github/workflows/ci-cd.yml`](<https://github.com/AuroNet0/tech-challenge-oficina/blob/master/.github/workflows/ci-cd.yml>).
 
 Ela executa:
 
