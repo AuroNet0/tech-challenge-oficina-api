@@ -220,3 +220,5 @@ Ela executa:
 - deploy do banco de dados
 - aplicacao dos manifests YAML do Kubernetes
 - validacao basica do deploy com `kubectl get` e `kubectl rollout status`
+
+alteração.
