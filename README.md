@@ -9,6 +9,69 @@ Centralizar o fluxo operacional da oficina e permitir:
 - ciclo completo de ordem de servico;
 - consulta/aprovacao de OS pelo cliente sem login (token publico).
 
+## Arquitetura proposta
+
+Diagrama resumido da solucao, com componentes da aplicacao, infraestrutura provisionada e fluxo de deploy:
+
+```mermaid
+flowchart TB
+    subgraph clientes["Consumidores"]
+        interno["Usuario interno"]
+        cliente["Cliente final"]
+        swagger["Swagger UI"]
+    end
+
+    subgraph app["Aplicacao - API Oficina"]
+        controllers["Controllers REST<br/>Auth<br/>Clientes<br/>Veiculos<br/>Pecas<br/>Servicos<br/>Usuarios<br/>Ordens de Servico<br/>Endpoints Publicos"]
+        security["Seguranca<br/>Spring Security<br/>JWT Filter<br/>RBAC"]
+        services["Services e Regras de negocio<br/>AuthService<br/>OrdemServicoService<br/>ClienteService<br/>VeiculoService<br/>PecaService<br/>ServicoService<br/>UsuarioService<br/>AprovacaoOrcamentoService<br/>TokenAprovacaoService<br/>EmailService"]
+        domain["Dominio e Entidades<br/>Cliente<br/>Veiculo<br/>Usuario<br/>OrdemServico<br/>Peca<br/>Servico<br/>TokenAprovacao"]
+        repos["Repositories<br/>Spring Data JPA"]
+    end
+
+    subgraph infra["Infraestrutura provisionada"]
+        compose["Docker Compose<br/>app + db"]
+        k8s["Kubernetes local com kind"]
+        apiPod["Deployment e Service<br/>oficina-api"]
+        dbPod["Deployment e Service<br/>oficina-db"]
+        config["ConfigMap + Secret"]
+        hpa["HPA + metrics-server"]
+        pg["PostgreSQL 15"]
+        smtp["SMTP Gmail"]
+    end
+
+    subgraph deploy["Fluxo de deploy"]
+        gha["GitHub Actions<br/>test, package, docker build, kind, kubectl apply"]
+        tf["Terraform<br/>kind, build image, load image, apply manifests"]
+        manual["Manual<br/>docker build, kind load, kubectl apply"]
+    end
+
+    interno --> security --> controllers
+    cliente --> controllers
+    swagger --> controllers
+    controllers --> services --> domain --> repos --> pg
+    services --> smtp
+
+    compose -. execucao local .-> app
+    k8s --> apiPod
+    k8s --> dbPod
+    config --> apiPod
+    config --> dbPod
+    hpa --> apiPod
+    apiPod --> pg
+    dbPod --> pg
+
+    gha --> k8s
+    tf --> k8s
+    manual --> k8s
+```
+
+### Resumo do desenho
+
+- **Componentes da aplicacao:** API Spring Boot organizada em camadas com controllers, services, entidades de dominio, repositories e seguranca JWT/RBAC.
+- **Infraestrutura provisionada:** execucao local com Docker Compose; ambiente Kubernetes local com `kind`, `Deployment`, `Service`, `ConfigMap`, `Secret`, `HPA`, `metrics-server` e PostgreSQL.
+- **Fluxo de deploy:** pode ser manual com `kubectl`, automatizado por Terraform, ou validado por CI/CD com GitHub Actions em cluster temporario `kind`.
+
 ## Stack
 
 - Java 21, Spring Boot 4.0.5
