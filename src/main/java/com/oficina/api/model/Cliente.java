@@ -48,6 +48,9 @@ public class Cliente {
     @Column(name = "data_cadastro", nullable = false)
     private LocalDateTime dataCadastro;
 
+    @Column(nullable = false)
+    private boolean ativo = true;
+
     @OneToMany(mappedBy = "cliente")
     private List<Veiculo> veiculos = new ArrayList<>();
 
@@ -148,6 +151,14 @@ public class Cliente {
 
     public void setDataCadastro(LocalDateTime dataCadastro) {
         this.dataCadastro = dataCadastro;
+    }
+
+    public boolean isAtivo() {
+        return ativo;
+    }
+
+    public void setAtivo(boolean ativo) {
+        this.ativo = ativo;
     }
 
     public List<Veiculo> getVeiculos() {
