@@ -47,6 +47,15 @@ public class JwtUtil {
                 .getSubject();
     }
 
+    public String extractTipo(String token) {
+        return Jwts.parser()
+                .verifyWith(signingKey)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("tipo", String.class);
+    }
+
     public boolean isValidToken(String token) {
         try {
             Jwts.parser()

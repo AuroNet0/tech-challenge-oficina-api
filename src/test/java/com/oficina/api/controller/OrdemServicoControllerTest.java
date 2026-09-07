@@ -27,6 +27,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
@@ -134,6 +135,21 @@ class OrdemServicoControllerTest {
         mockMvc.perform(get("/ordens-servico"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
+    }
+
+    @Test
+    void deveListarMinhasOrdensUsandoCpfDoPrincipalAutenticado() throws Exception {
+        OrdemServico os = criarOrdemServicoCompleta(1L, StatusOrdemServico.AGUARDANDO_APROVACAO, "170.00");
+        when(ordemServicoService.listarMinhasOrdens("12345678901")).thenReturn(List.of(os));
+
+        mockMvc.perform(get("/ordens-servico/minhas")
+                        .principal(new TestingAuthenticationToken("12345678901", null, "ROLE_CLIENTE")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id").value(1))
+                .andExpect(jsonPath("$[0].clienteNome").value("Cliente 1"));
+
+        verify(ordemServicoService).listarMinhasOrdens("12345678901");
     }
 
     @Test
