@@ -214,6 +214,13 @@ public class OrdemServicoService {
     }
 
     @Transactional(readOnly = true)
+    public List<OrdemServico> listarMinhasOrdens(String cpf) {
+        Cliente cliente = clienteRepository.findByCpfCnpj(cpf)
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente nao encontrado."));
+        return ordemServicoRepository.findByClienteId(cliente.getId());
+    }
+
+    @Transactional(readOnly = true)
     public List<OrdemServico> listarPorTokenCliente(String tokenAcesso) {
         Cliente cliente = buscarClientePorTokenOuFalhar(tokenAcesso);
         return ordemServicoRepository.findByClienteId(cliente.getId());

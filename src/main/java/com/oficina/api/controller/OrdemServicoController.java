@@ -19,6 +19,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -45,6 +46,20 @@ public class OrdemServicoController {
 
     public OrdemServicoController(OrdemServicoService ordemServicoService) {
         this.ordemServicoService = ordemServicoService;
+    }
+
+    @GetMapping("/minhas")
+    @Operation(summary = "Listar minhas ordens", description = "Retorna as ordens de servico do cliente autenticado.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Operacao realizada com sucesso"),
+            @ApiResponse(responseCode = "401", description = "Nao autenticado"),
+            @ApiResponse(responseCode = "403", description = "Acesso negado"),
+            @ApiResponse(responseCode = "404", description = "Recurso nao encontrado")
+    })
+    public ResponseEntity<List<OrdemServicoResumoResponse>> listarMinhas(Authentication authentication) {
+        String cpf = authentication.getPrincipal().toString();
+        List<OrdemServico> ordens = ordemServicoService.listarMinhasOrdens(cpf);
+        return ResponseEntity.ok(toResumoResponseList(ordens));
     }
 
     @GetMapping("/{id}")
