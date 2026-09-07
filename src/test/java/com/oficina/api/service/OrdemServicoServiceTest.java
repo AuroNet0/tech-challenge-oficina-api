@@ -566,6 +566,24 @@ class OrdemServicoServiceTest {
     }
 
     @Test
+    void deveRetornarSomenteOsDoClienteAutenticadoAoListarMinhasOrdens() {
+        Cliente cliente = criarCliente(2L);
+        List<OrdemServico> ordens = List.of(
+                criarOrdemServico(100L, StatusOrdemServico.RECEBIDA),
+                criarOrdemServico(101L, StatusOrdemServico.EM_DIAGNOSTICO)
+        );
+
+        when(clienteRepository.findByCpfCnpj("12345678901")).thenReturn(Optional.of(cliente));
+        when(ordemServicoRepository.findByClienteId(2L)).thenReturn(ordens);
+
+        List<OrdemServico> resultado = ordemServicoService.listarMinhasOrdens("12345678901");
+
+        assertThat(resultado).hasSize(2).containsExactlyElementsOf(ordens);
+        verify(clienteRepository).findByCpfCnpj("12345678901");
+        verify(ordemServicoRepository).findByClienteId(2L);
+    }
+
+    @Test
     void deveLancarResourceNotFoundExceptionQuandoClienteNaoExistirAoListarPorCliente() {
         when(clienteRepository.findById(1L)).thenReturn(Optional.empty());
 
