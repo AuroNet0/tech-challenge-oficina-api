@@ -44,6 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/pecas/**", "/servicos/**").hasAnyRole("GERENTE", "MECANICO")
                         .requestMatchers(HttpMethod.PATCH, "/pecas/**").hasAnyRole("GERENTE", "MECANICO")
 
+                        .requestMatchers(HttpMethod.GET, "/ordens-servico/minhas").hasRole("CLIENTE")
                         .requestMatchers(HttpMethod.GET, "/ordens-servico/**").hasAnyRole("ATENDENTE", "GERENTE", "MECANICO")
                         .requestMatchers(HttpMethod.POST, "/ordens-servico").hasAnyRole("ATENDENTE", "GERENTE")
                         .requestMatchers(HttpMethod.POST, "/ordens-servico/*/servicos", "/ordens-servico/*/pecas").hasAnyRole("MECANICO", "GERENTE")
@@ -51,7 +52,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PATCH, "/ordens-servico/*/status").hasAnyRole("MECANICO", "GERENTE")
                         .requestMatchers(HttpMethod.PATCH, "/ordens-servico/*/orcamento").hasAnyRole("ATENDENTE", "GERENTE")
 
-                        .anyRequest().authenticated())
+                        .anyRequest().hasAnyRole("ATENDENTE", "GERENTE", "MECANICO"))
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
