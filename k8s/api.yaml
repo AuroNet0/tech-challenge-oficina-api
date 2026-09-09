@@ -14,8 +14,8 @@ spec:
     spec:
       containers:
         - name: oficina-api
-          image: api-oficina:latest
-          imagePullPolicy: IfNotPresent
+          image: REPLACE_WITH_ECR_IMAGE_URI
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
           env:
@@ -53,7 +53,7 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: oficina-config
-                  key: POSTGRES_USER
+                  key: SPRING_DATASOURCE_USERNAME
             - name: SPRING_DATASOURCE_PASSWORD
               valueFrom:
                 secretKeyRef:
