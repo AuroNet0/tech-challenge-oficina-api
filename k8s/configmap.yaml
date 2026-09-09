@@ -3,11 +3,8 @@ kind: ConfigMap
 metadata:
   name: oficina-config
 data:
-  POSTGRES_DB: oficina_db
-  POSTGRES_USER: oficina_user
-  SPRING_DATASOURCE_URL: jdbc:postgresql://oficina-db:5432/oficina_db
+  SPRING_DATASOURCE_URL: "REPLACE_WITH_RDS_JDBC_URL"
+  SPRING_DATASOURCE_USERNAME: oficina_admin
   SPRING_JPA_HIBERNATE_DDL_AUTO: update
   SPRING_DOCKER_COMPOSE_ENABLED: "false"
   APP_PUBLIC_BASE_URL: http://localhost:8080
-  APP_MAIL_FROM: ""
-  SPRING_MAIL_USERNAME: ""
