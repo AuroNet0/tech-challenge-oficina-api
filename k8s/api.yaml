@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: oficina-api
-          image: REPLACE_WITH_ECR_IMAGE_URI
+          image: 446517826146.dkr.ecr.us-east-1.amazonaws.com/tech-challenge-oficina-api:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
@@ -87,4 +87,4 @@ spec:
   ports:
     - port: 8080
       targetPort: 8080
-  type: ClusterIP
+  type: LoadBalancer
