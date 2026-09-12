@@ -181,3 +181,12 @@ jobs:
 
       - name: Wait for rollout
         run: kubectl rollout status deployment/${{ env.K8S_DEPLOYMENT }} --timeout=180s
+
+      - name: Diagnose rollout failure
+        if: failure()
+        run: |
+          kubectl get deployment oficina-api -o wide
+          kubectl get pods -l app=oficina-api -o wide
+          kubectl describe deployment oficina-api
+          kubectl describe pods -l app=oficina-api
+          kubectl logs -l app=oficina-api --all-containers=true --tail=200 --prefix || true
