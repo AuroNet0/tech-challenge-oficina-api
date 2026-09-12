@@ -56,6 +56,12 @@ class SecurityConfigTest {
     }
 
     @Test
+    void healthcheckActuatorContinuaAcessivelSemAutenticacao() throws Exception {
+        mockMvc.perform(get("/actuator/health"))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
     @WithMockUser(roles = "CLIENTE")
     void roleClienteDeveAcessarMinhasOrdens() throws Exception {
         mockMvc.perform(get("/ordens-servico/minhas"))

@@ -139,6 +139,8 @@ jobs:
         env:
           SPRING_DATASOURCE_URL: ${{ steps.rds.outputs.jdbc_url }}
           APP_PUBLIC_BASE_URL: ${{ vars.APP_PUBLIC_BASE_URL }}
+          NEW_RELIC_ENABLED: ${{ vars.NEW_RELIC_ENABLED }}
+          NEW_RELIC_APP_NAME: ${{ vars.NEW_RELIC_APP_NAME }}
         run: |
           kubectl create configmap ${{ env.K8S_CONFIGMAP }} \
             --from-literal=SPRING_DATASOURCE_URL="$SPRING_DATASOURCE_URL" \
@@ -146,6 +148,8 @@ jobs:
             --from-literal=SPRING_JPA_HIBERNATE_DDL_AUTO="update" \
             --from-literal=SPRING_DOCKER_COMPOSE_ENABLED="false" \
             --from-literal=APP_PUBLIC_BASE_URL="$APP_PUBLIC_BASE_URL" \
+            --from-literal=NEW_RELIC_ENABLED="$NEW_RELIC_ENABLED" \
+            --from-literal=NEW_RELIC_APP_NAME="$NEW_RELIC_APP_NAME" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Apply Kubernetes Secret
@@ -155,6 +159,7 @@ jobs:
           SPRING_MAIL_USERNAME: ${{ secrets.SPRING_MAIL_USERNAME }}
           SPRING_MAIL_PASSWORD: ${{ secrets.SPRING_MAIL_PASSWORD }}
           APP_MAIL_FROM: ${{ secrets.APP_MAIL_FROM }}
+          NEW_RELIC_LICENSE_KEY: ${{ secrets.NEW_RELIC_LICENSE_KEY }}
         run: |
           kubectl create secret generic ${{ env.K8S_SECRET }} \
             --from-literal=POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
@@ -162,6 +167,7 @@ jobs:
             --from-literal=SPRING_MAIL_USERNAME="$SPRING_MAIL_USERNAME" \
             --from-literal=SPRING_MAIL_PASSWORD="$SPRING_MAIL_PASSWORD" \
             --from-literal=APP_MAIL_FROM="$APP_MAIL_FROM" \
+            --from-literal=NEW_RELIC_LICENSE_KEY="$NEW_RELIC_LICENSE_KEY" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Apply Kubernetes manifests
