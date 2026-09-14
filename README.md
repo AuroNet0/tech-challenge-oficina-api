@@ -46,6 +46,46 @@ A API roda como um `Deployment` Kubernetes chamado `oficina-api`, exposto por um
 
 A autenticação de cliente por CPF é tratada por um componente serverless separado quando aplicável. Nesta API, o `JwtFilter` reconhece tokens com claim `tipo=CLIENTE`, usa o CPF como principal autenticado e atribui a role `ROLE_CLIENTE` para acesso a endpoints protegidos de cliente.
 
+## Diagrama da arquitetura
+
+```mermaid
+flowchart LR
+    USER["Cliente / Funcionário"]
+
+    APIGW["Amazon API Gateway"]
+    LB["AWS Load Balancer"]
+
+    subgraph EKS["Amazon EKS"]
+        SVC["Kubernetes Service"]
+
+        subgraph POD["API Pod"]
+            API["Spring Boot API<br/>Java 21"]
+            SECURITY["Spring Security<br/>JWT / RBAC"]
+            BUSINESS["Regras de Negócio"]
+            OBS["New Relic Java Agent<br/>APM + Logs"]
+        end
+    end
+
+    RDS[("Amazon RDS<br/>PostgreSQL")]
+    ECR["Amazon ECR"]
+    NR["New Relic"]
+
+    USER -->|HTTPS| APIGW
+    APIGW --> LB
+    LB --> SVC
+    SVC --> API
+
+    API --> SECURITY
+    SECURITY --> BUSINESS
+
+    BUSINESS -->|JPA / PostgreSQL| RDS
+
+    ECR -->|Imagem Docker| POD
+
+    API --> OBS
+    OBS -->|APM, logs e traces| NR
+```
+
 ## Autenticação e perfis
 
 O endpoint de login interno é:
