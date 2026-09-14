@@ -4,6 +4,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -11,11 +13,14 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 import java.util.UUID;
 
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
 public class CorrelationIdFilter extends OncePerRequestFilter {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(CorrelationIdFilter.class);
 
     public static final String CORRELATION_ID_HEADER = "X-Correlation-ID";
     public static final String CORRELATION_ID_MDC_KEY = "correlationId";
@@ -25,12 +30,19 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
         String correlationId = resolveCorrelationId(request);
+        long startTime = System.nanoTime();
 
         try {
             MDC.put(CORRELATION_ID_MDC_KEY, correlationId);
             response.setHeader(CORRELATION_ID_HEADER, correlationId);
             filterChain.doFilter(request, response);
         } finally {
+            long durationMs = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - startTime);
+            LOGGER.info("HTTP request completed: method={} path={} status={} durationMs={}",
+                    request.getMethod(),
+                    request.getRequestURI(),
+                    response.getStatus(),
+                    durationMs);
             MDC.remove(CORRELATION_ID_MDC_KEY);
         }
     }
