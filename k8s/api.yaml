@@ -75,6 +75,16 @@ spec:
                 configMapKeyRef:
                   name: oficina-config
                   key: NEW_RELIC_APP_NAME
+            - name: NEW_RELIC_APPLICATION_LOGGING_FORWARDING_CONTEXT_DATA_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: oficina-config
+                  key: NEW_RELIC_APPLICATION_LOGGING_FORWARDING_CONTEXT_DATA_ENABLED
+            - name: NEW_RELIC_APPLICATION_LOGGING_FORWARDING_CONTEXT_DATA_INCLUDE
+              valueFrom:
+                configMapKeyRef:
+                  name: oficina-config
+                  key: NEW_RELIC_APPLICATION_LOGGING_FORWARDING_CONTEXT_DATA_INCLUDE
             - name: APP_MAIL_FROM
               valueFrom:
                 secretKeyRef:
