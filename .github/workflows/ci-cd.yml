@@ -150,6 +150,8 @@ jobs:
             --from-literal=APP_PUBLIC_BASE_URL="$APP_PUBLIC_BASE_URL" \
             --from-literal=NEW_RELIC_ENABLED="$NEW_RELIC_ENABLED" \
             --from-literal=NEW_RELIC_APP_NAME="$NEW_RELIC_APP_NAME" \
+            --from-literal=NEW_RELIC_APPLICATION_LOGGING_FORWARDING_CONTEXT_DATA_ENABLED="true" \
+            --from-literal=NEW_RELIC_APPLICATION_LOGGING_FORWARDING_CONTEXT_DATA_INCLUDE="correlationId" \
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Apply Kubernetes Secret
