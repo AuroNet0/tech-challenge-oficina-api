@@ -10,10 +10,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class EmailService {
+
+    private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
 
     private final JavaMailSender javaMailSender;
     private final String baseUrl;
@@ -86,8 +90,8 @@ public class EmailService {
         try {
             javaMailSender.send(message);
         } catch (MailException ex) {
+            logger.warn("Falha ao enviar e-mail da operacao {}.", operation, ex);
             observabilityService.recordExternalIntegrationError("email", operation, ex);
-            throw ex;
         }
     }
 
