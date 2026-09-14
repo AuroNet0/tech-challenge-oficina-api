@@ -17,6 +17,7 @@ import com.oficina.api.model.TokenAprovacao;
 import com.oficina.api.model.Veiculo;
 import com.oficina.api.model.enums.StatusOrdemServico;
 import com.oficina.api.model.enums.TipoPessoa;
+import com.oficina.api.observability.BusinessObservabilityService;
 import com.oficina.api.repository.ClienteRepository;
 import com.oficina.api.repository.OrdemServicoRepository;
 import com.oficina.api.repository.PecaRepository;
@@ -30,6 +31,8 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +42,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -65,6 +69,9 @@ class OrdemServicoServiceTest {
 
     @Mock
     private EmailService emailService;
+
+    @Mock
+    private BusinessObservabilityService observabilityService;
 
     @InjectMocks
     private OrdemServicoService ordemServicoService;
@@ -96,6 +103,7 @@ class OrdemServicoServiceTest {
         verify(clienteRepository).findById(1L);
         verify(veiculoRepository).findById(10L);
         verify(ordemServicoRepository).save(any(OrdemServico.class));
+        verify(observabilityService).recordOrdemServicoCreated(resultado);
     }
 
     @Test
@@ -356,6 +364,24 @@ class OrdemServicoServiceTest {
         verify(ordemServicoRepository).findById(100L);
         verify(ordemServicoRepository).save(any(OrdemServico.class));
         verify(emailService).enviarAtualizacaoStatus(ordemServico);
+        verify(observabilityService).recordStatusChanged(100L, StatusOrdemServico.EM_EXECUCAO, StatusOrdemServico.FINALIZADA);
+    }
+
+    @Test
+    void deveRegistrarDuracaoDaExecucaoQuandoDatasExistiremAoFinalizar() {
+        OrdemServico ordemServico = criarOrdemServico(100L, StatusOrdemServico.EM_EXECUCAO);
+        ordemServico.setDataInicioExecucao(LocalDateTime.now().minusMinutes(90));
+        when(ordemServicoRepository.findById(100L)).thenReturn(Optional.of(ordemServico));
+
+        OrdemServico resultado = ordemServicoService.atualizarStatus(
+                100L, new AtualizarStatusOrdemServicoRequest(StatusOrdemServico.FINALIZADA));
+
+        assertThat(resultado.getDataFinalizacao()).isNotNull();
+        verify(observabilityService).recordStageDuration(
+                eq(100L),
+                eq(StatusOrdemServico.EM_EXECUCAO),
+                any(Duration.class)
+        );
     }
 
     @Test

@@ -1,94 +1,139 @@
-# API Oficina Mecanica
+# Tech Challenge Oficina - API
 
-API REST para gestao de oficina: clientes, veiculos, servicos, pecas/estoque e ordens de servico, com autenticacao JWT, RBAC por perfil e acompanhamento publico de OS por token.
+API principal da oficina mecânica desenvolvida em Spring Boot com Java 21. O projeto expõe recursos REST para a operação da oficina, usa autenticação/autorização com JWT e está preparado para execução em Kubernetes no AWS EKS, com imagem publicada no AWS ECR e banco PostgreSQL externo.
 
-## Objetivo
+## Responsabilidades da API
 
-Centralizar o fluxo operacional da oficina e permitir:
-- gestao interna com perfis de acesso;
-- ciclo completo de ordem de servico;
-- consulta/aprovacao de OS pelo cliente sem login (token publico).
+- Gerenciar clientes.
+- Gerenciar veículos vinculados aos clientes.
+- Gerenciar serviços oferecidos pela oficina.
+- Gerenciar peças e estoque.
+- Gerenciar ordens de serviço, incluindo itens, orçamento, status e consulta por cliente.
+- Autenticar usuários internos e proteger endpoints com JWT conforme as regras implementadas no `SecurityConfig`.
+- Disponibilizar observabilidade por health checks, logs estruturados, correlation ID e eventos/métricas de negócio.
 
-## Arquitetura proposta
+## Tecnologias utilizadas
 
-Diagrama resumido da solucao, com componentes da aplicacao, infraestrutura provisionada e fluxo de deploy:
+- Java 21
+- Spring Boot 4.0.5
+- Spring Security
+- Spring Data JPA
+- Spring Boot Actuator
+- Springdoc OpenAPI/Swagger
+- PostgreSQL
+- Maven/Maven Wrapper
+- Docker
+- Docker Compose
+- Kubernetes
+- AWS EKS
+- AWS ECR
+- AWS RDS PostgreSQL
+- API Gateway
+- New Relic
+- GitHub Actions
+- Testcontainers
+- JaCoCo
 
-```mermaid
-flowchart TB
-    subgraph clientes["Consumidores"]
-        interno["Usuario interno"]
-        cliente["Cliente final"]
-        swagger["Swagger UI"]
-    end
+## Arquitetura e integração
 
-    subgraph app["Aplicacao - API Oficina"]
-        controllers["Controllers REST<br/>Auth<br/>Clientes<br/>Veiculos<br/>Pecas<br/>Servicos<br/>Usuarios<br/>Ordens de Servico<br/>Endpoints Publicos"]
-        security["Seguranca<br/>Spring Security<br/>JWT Filter<br/>RBAC"]
-        services["Services e Regras de negocio<br/>AuthService<br/>OrdemServicoService<br/>ClienteService<br/>VeiculoService<br/>PecaService<br/>ServicoService<br/>UsuarioService<br/>AprovacaoOrcamentoService<br/>TokenAprovacaoService<br/>EmailService"]
-        domain["Dominio e Entidades<br/>Cliente<br/>Veiculo<br/>Usuario<br/>OrdemServico<br/>Peca<br/>Servico<br/>TokenAprovacao"]
-        repos["Repositories<br/>Spring Data JPA"]
-    end
+Fluxo principal previsto para o ambiente em nuvem:
 
-    subgraph infra["Infraestrutura provisionada"]
-        compose["Docker Compose<br/>app + db"]
-        k8s["Kubernetes local com kind"]
-        apiPod["Deployment e Service<br/>oficina-api"]
-        dbPod["Deployment e Service<br/>oficina-db"]
-        config["ConfigMap + Secret"]
-        hpa["HPA + metrics-server"]
-        pg["PostgreSQL 15"]
-        smtp["SMTP Gmail"]
-    end
-
-    subgraph deploy["Fluxo de deploy"]
-        gha["GitHub Actions<br/>test, package, docker build, kind, kubectl apply"]
-        tf["Terraform<br/>kind, build image, load image, apply manifests"]
-        manual["Manual<br/>docker build, kind load, kubectl apply"]
-    end
-
-    interno --> security --> controllers
-    cliente --> controllers
-    swagger --> controllers
-    controllers --> services --> domain --> repos --> pg
-    services --> smtp
-
-    compose -. execucao local .-> app
-    k8s --> apiPod
-    k8s --> dbPod
-    config --> apiPod
-    config --> dbPod
-    hpa --> apiPod
-    apiPod --> pg
-    dbPod --> pg
-
-    gha --> k8s
-    tf --> k8s
-    manual --> k8s
+```text
+Cliente -> API Gateway -> Load Balancer -> API no EKS -> RDS PostgreSQL
 ```
 
-### Resumo do desenho
+A API roda como um `Deployment` Kubernetes chamado `oficina-api`, exposto por um `Service` do tipo `LoadBalancer`. O deploy automatizado publica a imagem Docker no ECR, atualiza o cluster EKS e configura a aplicação para acessar o endpoint do RDS PostgreSQL.
 
-- **Componentes da aplicacao:** API Spring Boot organizada em camadas com controllers, services, entidades de dominio, repositories e seguranca JWT/RBAC.
-- **Infraestrutura provisionada:** execucao local com Docker Compose; ambiente Kubernetes local com `kind`, `Deployment`, `Service`, `ConfigMap`, `Secret`, `HPA`, `metrics-server` e PostgreSQL.
-- **Fluxo de deploy:** pode ser manual com `kubectl`, automatizado por Terraform, ou validado por CI/CD com GitHub Actions em cluster temporario `kind`.
+A autenticação de cliente por CPF é tratada por um componente serverless separado quando aplicável. Nesta API, o `JwtFilter` reconhece tokens com claim `tipo=CLIENTE`, usa o CPF como principal autenticado e atribui a role `ROLE_CLIENTE` para acesso a endpoints protegidos de cliente.
 
-## Stack
+## Autenticação e perfis
 
-- Java 21, Spring Boot 4.0.5
-- Spring Data JPA + PostgreSQL
-- Spring Security + JWT
-- Swagger/OpenAPI (`/swagger-ui.html`)
-- Maven Wrapper (`mvnw` / `mvnw.cmd`)
+O endpoint de login interno é:
 
-## Execucao
-
-### Docker Compose
-```bash
-# copie .env.example para .env e ajuste os valores
-docker compose up --build
+```http
+POST /auth/login
 ```
 
-### Local (API + PostgreSQL)
+As rotas protegidas esperam o header:
+
+```http
+Authorization: Bearer <token>
+```
+
+Perfis e roles considerados no `SecurityConfig`:
+
+| Perfil | Uso principal |
+| --- | --- |
+| `CLIENTE` | Consulta das próprias ordens de serviço via JWT de cliente. |
+| `ATENDENTE` | Cadastro e manutenção de clientes/veículos, criação de ordens de serviço e envio/aprovação de orçamento. |
+| `MECANICO` | Consulta operacional, atualização técnica de ordens de serviço, serviços, peças e estoque. |
+| `GERENTE` | Acesso administrativo, incluindo usuários e operações de exclusão. |
+
+Também existem endpoints públicos sob `/public/**` para consulta/aprovação por token público, sem login interno.
+
+## Principais endpoints
+
+| Grupo | Responsabilidade |
+| --- | --- |
+| `/auth` | Login e geração de JWT. |
+| `/clientes` | Cadastro, consulta, atualização e exclusão de clientes. |
+| `/veiculos` | Cadastro, consulta, atualização e exclusão de veículos. |
+| `/servicos` | Cadastro, consulta, atualização e exclusão de serviços. |
+| `/pecas` | Cadastro, consulta, atualização, estoque e exclusão de peças. |
+| `/ordens-servico` | Criação, consulta, itens, status, orçamento e ordens do cliente autenticado. |
+| `/public/ordens-servico` | Consulta pública de ordens por token. |
+| `/public/aprovacoes` | Aprovação ou reprovação pública de orçamento por token. |
+| `/actuator/health` | Health check geral da aplicação. |
+
+A documentação completa dos contratos REST está disponível via Swagger/OpenAPI.
+
+## Swagger / OpenAPI
+
+Com a aplicação em execução, acesse:
+
+```text
+http://localhost:8080/swagger-ui.html
+```
+
+Também é permitido pelo Spring Security o caminho `/swagger-ui/**`, incluindo `/swagger-ui/index.html` quando resolvido pelo Springdoc.
+
+O documento OpenAPI fica disponível em:
+
+```text
+http://localhost:8080/v3/api-docs
+```
+
+A variável `APP_PUBLIC_BASE_URL` define o servidor público exibido no OpenAPI. Em ambiente de nuvem, ela deve apontar para a URL pública exposta para consumo da API, como a URL configurada no API Gateway.
+
+## Variáveis de ambiente
+
+| Variável | Obrigatória | Sensível | Uso |
+| --- | --- | --- | --- |
+| `SPRING_DATASOURCE_URL` | Sim | Não | URL JDBC do PostgreSQL. |
+| `SPRING_DATASOURCE_USERNAME` | Sim | Não | Usuário do banco. |
+| `SPRING_DATASOURCE_PASSWORD` | Sim | Sim | Senha do banco. |
+| `SPRING_JPA_HIBERNATE_DDL_AUTO` | Não | Não | Estratégia de DDL do Hibernate (`create`, `update`, etc.). |
+| `JWT_SECRET` | Sim | Sim | Chave usada para assinatura/validação dos tokens JWT. |
+| `APP_PUBLIC_BASE_URL` | Não | Não | URL pública usada em links e no servidor exibido no OpenAPI. |
+| `SPRING_MAIL_USERNAME` | Não | Sim | Usuário SMTP para envio de e-mails. |
+| `SPRING_MAIL_PASSWORD` | Não | Sim | Senha SMTP para envio de e-mails. |
+| `APP_MAIL_FROM` | Não | Sim | Remetente usado nos e-mails enviados pela aplicação. |
+| `NEW_RELIC_ENABLED` | Não | Não | Habilita o agente New Relic no container quando `true`. |
+| `NEW_RELIC_APP_NAME` | Não | Não | Nome da aplicação no New Relic. |
+| `NEW_RELIC_LICENSE_KEY` | Necessária quando New Relic estiver habilitado | Sim | License key do New Relic. |
+| `SPRING_DOCKER_COMPOSE_ENABLED` | Não | Não | Controla a integração do Spring Boot com Docker Compose. |
+| `POSTGRES_DB` | Local/Compose | Não | Nome do banco criado pelo container PostgreSQL local. |
+| `POSTGRES_USER` | Local/Compose | Não | Usuário criado pelo container PostgreSQL local. |
+| `POSTGRES_PASSWORD` | Local/Compose | Sim | Senha criada para o PostgreSQL local. |
+
+Não armazene valores sensíveis no repositório. Use `.env` local, GitHub Environments/Secrets e Secrets do Kubernetes.
+
+## Execução local
+
+### Maven
+
+Para executar localmente com Maven Wrapper, a aplicação espera um PostgreSQL acessível conforme as variáveis `SPRING_DATASOURCE_*`.
+
 ```bash
 # Windows
 .\mvnw.cmd spring-boot:run
@@ -97,189 +142,151 @@ docker compose up --build
 ./mvnw spring-boot:run
 ```
 
-API: `http://localhost:8080`  
-Swagger: `http://localhost:8080/swagger-ui.html`
+Por padrão, a aplicação usa `jdbc:postgresql://localhost:5432/oficina_db`, usuário `oficina_user` e senha `oficina_pass` quando as variáveis não são informadas.
+
+### Docker Compose
+
+O projeto inclui `compose.yaml` com PostgreSQL 15 Alpine e a API em modo de desenvolvimento.
+
+```bash
+docker compose up --build
+```
+
+O Compose usa `.env` quando disponível. O arquivo `.env.example` mostra as variáveis esperadas para execução local.
+
+### Build e testes
+
+```bash
+# Windows
+.\mvnw.cmd test
+.\mvnw.cmd clean package
+
+# Linux/macOS
+./mvnw test
+./mvnw clean package
+```
+
+O projeto possui testes automatizados com Spring Boot Test, Spring Security Test e Testcontainers, além de relatório de cobertura via JaCoCo.
 
 ## Banco e carga inicial
 
-- `spring.jpa.hibernate.ddl-auto=create` no Compose de desenvolvimento: recria schema ao subir a aplicacao.
-- `data.sql`: insere 3 usuarios padrao para login:
-  - `atendente@oficina.com` (`ATENDENTE`)
-  - `mecanico@oficina.com` (`MECANICO`)
-  - `gerente@oficina.com` (`GERENTE`)
-- Senha dos 3: `123456`
+O arquivo `src/main/resources/data.sql` cria usuários internos padrão quando ainda não existem:
 
-Observacao: para reset fisico completo do banco no Docker (incluindo volume), use `docker compose down -v` antes do `up`.
+| E-mail | Perfil |
+| --- | --- |
+| `atendente@oficina.com` | `ATENDENTE` |
+| `mecanico@oficina.com` | `MECANICO` |
+| `gerente@oficina.com` | `GERENTE` |
 
-## Autenticacao
+No Compose de desenvolvimento, `SPRING_JPA_HIBERNATE_DDL_AUTO` está configurado como `create`, recriando o schema ao subir a aplicação.
 
-- Login: `POST /auth/login`
-- Header para rotas protegidas:
-  - `Authorization: Bearer <token>`
+## Health checks
 
-## Controle de acesso (RBAC)
+O Actuator expõe apenas endpoints de saúde:
 
-Perfis: `ATENDENTE`, `MECANICO`, `GERENTE`.
-
-Regras principais:
-- `GERENTE`: acesso total; exclusivo para `/usuarios/**` e operacoes de exclusao.
-- `ATENDENTE`: foco em atendimento (clientes, veiculos, criacao OS, envio/aprovacao interna de orcamento).
-- `MECANICO`: foco tecnico (itens da OS, status, servicos/pecas/estoque).
-
-## Endpoints publicos (cliente)
-
-- `GET /public/ordens-servico?token={token}`
-  - lista status das OS do cliente dono do token.
-- `PATCH /public/ordens-servico/{id}/orcamento?token={token}`
-  - aprova/reprova orcamento da OS do cliente.
-
-## Regras de negocio de OS
-
-- Itens (servicos/pecas) so podem ser adicionados em OS `RECEBIDA` ou `EM_DIAGNOSTICO`.
-- Envio de orcamento: OS deve estar `EM_DIAGNOSTICO`.
-- Aprovacao de orcamento: OS deve estar `AGUARDANDO_APROVACAO`.
-- Ao aprovar, a OS vai para `EM_EXECUCAO` e ocorre baixa de estoque das pecas.
-- Se faltar estoque na aprovacao, a operacao falha com `BusinessException`.
-
-## Variaveis de ambiente principais
-
-- `POSTGRES_DB`
-- `POSTGRES_USER`
-- `POSTGRES_PASSWORD`
-- `JWT_SECRET`
-- `SPRING_MAIL_USERNAME`
-- `SPRING_MAIL_PASSWORD`
-- `APP_MAIL_FROM`
-- `APP_PUBLIC_BASE_URL`
-
-### Exemplo de configuracao
-
-```env
-POSTGRES_DB=oficina_db
-POSTGRES_USER=oficina_user
-POSTGRES_PASSWORD=troque-esta-senha
-JWT_SECRET=troque-este-jwt-secret
-SPRING_MAIL_USERNAME=
-SPRING_MAIL_PASSWORD=
-APP_MAIL_FROM=
-APP_PUBLIC_BASE_URL=http://localhost:8080
+```text
+/actuator/health
+/actuator/health/liveness
+/actuator/health/readiness
 ```
 
-## Testes e build
+Os manifests Kubernetes usam `/actuator/health/liveness` para `startupProbe` e `livenessProbe`, e `/actuator/health/readiness` para `readinessProbe`.
 
-```bash
-# testes
-.\mvnw.cmd test
+## Observabilidade
 
-# build
-.\mvnw.cmd clean package
-```
+A observabilidade implementada inclui:
+
+- New Relic APM por agente Java no container, habilitado por `NEW_RELIC_ENABLED=true` e `NEW_RELIC_LICENSE_KEY`.
+- Integração com a API oficial do New Relic para eventos e métricas customizadas.
+- Logs estruturados em JSON via Logback e `logstash-logback-encoder`.
+- Correlation ID via header `X-Correlation-ID`; quando ausente, a API gera um UUID e devolve o mesmo header na resposta.
+- Inclusão de `correlationId` no MDC dos logs.
+
+Eventos e métricas de negócio implementados:
+
+| Nome | Tipo | Finalidade |
+| --- | --- | --- |
+| `OrdemServicoCreated` | Evento customizado | Registro de criação de ordem de serviço. |
+| `OrdemServicoStatusChanged` | Evento customizado | Registro de alteração de status da ordem. |
+| `OrdemServicoStageDuration` | Evento customizado e métrica de tempo | Duração de etapas da ordem de serviço. |
+| `ExternalIntegrationError` | Evento customizado | Falhas em integrações externas, como envio de e-mail. |
+| `Custom/Business/OrdemServico/Created` | Métrica | Contagem de ordens de serviço criadas. |
+| `Custom/Business/OrdemServico/StageDuration/{STATUS}` | Métrica | Tempo gasto por status/etapa da ordem. |
 
 ## Kubernetes
 
-Os manifestos simples para K8s estao em [k8s](<https://github.com/AuroNet0/tech-challenge-oficina/tree/master/k8s>):
+Os manifests Kubernetes estão em `k8s/`:
 
-- `configmap.yaml`
-- `secret.yaml`
-- `postgres.yaml`
-- `api.yaml`
-- `hpa.yaml`
+| Arquivo | Função |
+| --- | --- |
+| `api.yaml` | `Deployment` e `Service` `LoadBalancer` da API. |
+| `configmap.yaml` | Configurações não sensíveis da aplicação. |
+| `secret.example.yaml` | Exemplo de Secret esperado pela aplicação. |
+| `secret.yaml` | Secret local do repositório. Não deve conter credenciais reais versionadas. |
+| `hpa.yaml` | Horizontal Pod Autoscaler para CPU e memória. |
 
-### Exemplo local com `kind`
-
-Antes de aplicar os manifestos, suba um cluster local:
-
-```bash
-kind create cluster --name oficina-cluster --image kindest/node:v1.33.1 --config infra/kind-config.yaml
-```
-
-### Build da imagem
-
-```bash
-docker build --target runtime -t api-oficina:latest .
-```
-
-### Carga da imagem no cluster
-
-Como o manifesto da API usa a imagem local `api-oficina:latest`, em ambiente `kind` e preciso carregar a imagem para dentro do cluster:
-
-```bash
-kind load docker-image api-oficina:latest --name oficina-cluster
-```
-
-### Aplicacao dos manifestos
-
-```bash
-kubectl apply -f k8s/configmap.yaml
-kubectl apply -f k8s/secret.yaml
-kubectl apply -f k8s/postgres.yaml
-kubectl apply -f k8s/api.yaml
-kubectl apply -f k8s/hpa.yaml
-```
-### Ou
-```bash
-kubectl apply -f k8s/
-```
-
-### Acesso local
-
-```bash
-kubectl port-forward service/oficina-api 8080:8080
-```
-
-API: `http://localhost:8080`  
-Swagger: `http://localhost:8080/swagger-ui.html`
-
-### Observacoes
-
-- Antes do deploy, ajuste os valores em `k8s/secret.yaml`.
-- Se voce estiver usando outro cluster Kubernetes, publique a imagem em um registry acessivel pelo cluster e ajuste o campo `image` em `k8s/api.yaml` se necessario. O passo de `kind load docker-image` vale apenas para `kind`.
-- O `HPA` depende do `metrics-server` instalado no cluster.
-- Em ambiente local com `kind`, os manifestos podem ser aplicados normalmente mesmo sem a API de metricas estar disponivel. Nesse caso, o `kubectl top pods` retorna `Metrics API not available` e o HPA aparece com `cpu: <unknown>` e `memory: <unknown>`, sem invalidar os manifests entregues.
-- Para manter a solucao simples, o PostgreSQL foi definido com `Deployment` e `Service`. Em ambiente real, o mais adequado seria usar persistencia e, em geral, `StatefulSet`.
-
-## Infraestrutura como Codigo
-
-Os scripts Terraform estao em [infra](<https://github.com/AuroNet0/tech-challenge-oficina/tree/master/infra>) e fazem:
-
-- provisionamento do cluster Kubernetes local com `kind`
-- build da imagem Docker da API
-- carga da imagem Docker da API no cluster `kind`
-- instalacao automatica do `metrics-server` para suportar o HPA no `kind`
-- aplicacao dos manifests Kubernetes do projeto
-- provisionamento do banco PostgreSQL dentro do cluster por meio do manifesto `k8s/postgres.yaml`
-
-### Aplicacao
-
-```bash
-cd infra
-terraform init
-terraform apply
-```
-
-### Recursos criados
-
-- cluster Kubernetes local `kind`
-- build da imagem Docker da API
-- carga da imagem Docker da API no cluster
-- instalacao do `metrics-server`
-- `ConfigMap`
-- `Secret`
-- `Deployment` e `Service` do PostgreSQL
-- `Deployment` e `Service` da API
-- `HorizontalPodAutoscaler`
+O container expõe a porta `8080`, usa probes do Actuator e define requests/limits de CPU e memória. A imagem base de runtime é `eclipse-temurin:21-jre-alpine`.
 
 ## CI/CD
 
-A pipeline de CI/CD foi configurada com GitHub Actions em [`.github/workflows/ci-cd.yml`](<https://github.com/AuroNet0/tech-challenge-oficina/blob/master/.github/workflows/ci-cd.yml>).
+O workflow `.github/workflows/ci-cd.yml` roda em:
 
-Ela executa:
+- `push` para `homolog` e `master`;
+- `pull_request` para `homolog` e `master`;
+- execução manual via `workflow_dispatch`.
 
-- build da aplicacao com Maven
-- testes automatizados
-- build da imagem Docker
-- criacao de cluster Kubernetes temporario com `kind`
-- instalacao do `metrics-server`
-- deploy do banco de dados
-- aplicacao dos manifests YAML do Kubernetes
-- validacao basica do deploy com `kubectl get` e `kubectl rollout status`
+Job `CI`:
+
+- checkout do repositório;
+- configuração do Java 21 com cache Maven;
+- execução de testes com `./mvnw -B test`;
+- build do pacote com `./mvnw -B clean package -DskipTests`;
+- build da imagem Docker com target `runtime`.
+
+Job `Deploy`:
+
+- executa somente em `push` para `homolog` ou `master`, nunca em Pull Request;
+- usa o environment `homolog` para branch `homolog` e `production` para branch `master`;
+- autentica na AWS por OIDC usando `AWS_DEPLOY_ROLE_ARN`;
+- publica imagem no AWS ECR com tags do commit e do ambiente (`homolog` ou `production`);
+- atualiza o kubeconfig do cluster EKS `tech-challenge-oficina`;
+- obtém o endpoint do RDS `tech-challenge-oficina-postgres`;
+- cria/atualiza ConfigMap e Secret no Kubernetes a partir de variáveis e secrets do GitHub;
+- aplica `k8s/api.yaml` e `k8s/hpa.yaml`;
+- atualiza a imagem do deployment `oficina-api`;
+- aguarda o rollout e coleta diagnóstico em caso de falha.
+
+## Deploy
+
+O deploy é automatizado pelo GitHub Actions. Alterações integradas nas branches `homolog` ou `master` passam por testes, build Maven, build Docker, publicação no ECR e atualização do deployment no EKS.
+
+Não há necessidade de comandos manuais de deploy no fluxo principal. Credenciais e segredos devem ser fornecidos por GitHub Environments/Secrets e Kubernetes Secrets.
+
+## Estratégia de branches
+
+- `homolog`: branch de homologação.
+- `master`: branch de produção.
+- Alterações devem ser propostas via Pull Request.
+- Branches protegidas devem seguir o fluxo definido para o projeto, garantindo revisão e execução da pipeline antes da integração.
+
+## Segurança
+
+- Não armazenar secrets no repositório.
+- Usar GitHub Environments/Secrets para CI/CD.
+- Usar Kubernetes Secrets para credenciais em runtime.
+- Proteger endpoints com JWT.
+- Aplicar RBAC da aplicação conforme roles do `SecurityConfig`.
+- Manter credenciais de banco, SMTP, JWT e New Relic fora de arquivos versionados.
+
+## Regras principais de ordem de serviço
+
+- Itens de serviço e peças são adicionados à ordem de serviço conforme regras da camada de serviço.
+- O orçamento pode ser enviado para aprovação.
+- A aprovação do orçamento altera o fluxo da ordem e realiza baixa de estoque quando aplicável.
+- Falta de estoque ou transições inválidas geram exceções de negócio.
+
+## Relação com demais repositórios
+
+- `tech-challenge-oficina-auth`
+- `tech-challenge-oficina-k8s-infra`
+- `tech-challenge-oficina-database-infra`

@@ -15,6 +15,7 @@ import com.oficina.api.model.Peca;
 import com.oficina.api.model.Servico;
 import com.oficina.api.model.Veiculo;
 import com.oficina.api.model.enums.StatusOrdemServico;
+import com.oficina.api.observability.BusinessObservabilityService;
 import com.oficina.api.repository.ClienteRepository;
 import com.oficina.api.repository.OrdemServicoRepository;
 import com.oficina.api.repository.PecaRepository;
@@ -24,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Comparator;
@@ -39,6 +41,7 @@ public class OrdemServicoService {
     private final PecaRepository pecaRepository;
     private final TokenAprovacaoService tokenAprovacaoService;
     private final EmailService emailService;
+    private final BusinessObservabilityService observabilityService;
 
     public OrdemServicoService(OrdemServicoRepository ordemServicoRepository,
                                ClienteRepository clienteRepository,
@@ -46,7 +49,8 @@ public class OrdemServicoService {
                                ServicoRepository servicoRepository,
                                PecaRepository pecaRepository,
                                TokenAprovacaoService tokenAprovacaoService,
-                               EmailService emailService) {
+                               EmailService emailService,
+                               BusinessObservabilityService observabilityService) {
         this.ordemServicoRepository = ordemServicoRepository;
         this.clienteRepository = clienteRepository;
         this.veiculoRepository = veiculoRepository;
@@ -54,6 +58,7 @@ public class OrdemServicoService {
         this.pecaRepository = pecaRepository;
         this.tokenAprovacaoService = tokenAprovacaoService;
         this.emailService = emailService;
+        this.observabilityService = observabilityService;
     }
 
     @Transactional
@@ -71,7 +76,9 @@ public class OrdemServicoService {
         ordemServico.setDataAbertura(LocalDateTime.now());
         ordemServico.setValorTotal(BigDecimal.ZERO);
 
-        return ordemServicoRepository.save(ordemServico);
+        OrdemServico ordemSalva = ordemServicoRepository.save(ordemServico);
+        observabilityService.recordOrdemServicoCreated(ordemSalva);
+        return ordemSalva;
     }
 
     @Transactional
@@ -92,6 +99,7 @@ public class OrdemServicoService {
 
         OrdemServico ordemSalva = ordemServicoRepository.save(ordemServico);
         notificarSeStatusMudou(statusAnterior, ordemSalva);
+        registrarMudancaStatusSeNecessario(ordemSalva, statusAnterior);
         return ordemSalva;
     }
 
@@ -115,6 +123,7 @@ public class OrdemServicoService {
 
         OrdemServico ordemSalva = ordemServicoRepository.save(ordemServico);
         notificarSeStatusMudou(statusAnterior, ordemSalva);
+        registrarMudancaStatusSeNecessario(ordemSalva, statusAnterior);
         return ordemSalva;
     }
 
@@ -133,6 +142,7 @@ public class OrdemServicoService {
 
         OrdemServico ordemSalva = ordemServicoRepository.save(ordemServico);
         notificarAtualizacaoStatus(ordemSalva);
+        registrarMudancaStatusSeNecessario(ordemSalva, statusAtual);
         return ordemSalva;
     }
 
@@ -158,6 +168,7 @@ public class OrdemServicoService {
 
         OrdemServico ordemSalva = ordemServicoRepository.save(ordemServico);
         notificarAtualizacaoStatus(ordemSalva);
+        registrarMudancaStatusSeNecessario(ordemSalva, statusAtual);
         return ordemSalva;
     }
 
@@ -173,6 +184,7 @@ public class OrdemServicoService {
         OrdemServico ordemSalva = ordemServicoRepository.save(ordemServico);
         String token = tokenAprovacaoService.gerarToken(ordemSalva).getToken();
         emailService.enviarEmailAprovacao(ordemSalva, token);
+        registrarMudancaStatusSeNecessario(ordemSalva, StatusOrdemServico.EM_DIAGNOSTICO);
         return ordemSalva;
     }
 
@@ -337,6 +349,39 @@ public class OrdemServicoService {
     private void notificarSeStatusMudou(StatusOrdemServico statusAnterior, OrdemServico ordemServico) {
         if (statusAnterior != ordemServico.getStatus()) {
             notificarAtualizacaoStatus(ordemServico);
+        }
+    }
+
+    private void registrarMudancaStatusSeNecessario(OrdemServico ordemServico, StatusOrdemServico statusAnterior) {
+        StatusOrdemServico statusAtual = ordemServico.getStatus();
+        if (statusAnterior == statusAtual) {
+            return;
+        }
+
+        observabilityService.recordStatusChanged(ordemServico.getId(), statusAnterior, statusAtual);
+        registrarDuracaoEtapaQuandoPossivel(ordemServico, statusAnterior, statusAtual);
+    }
+
+    private void registrarDuracaoEtapaQuandoPossivel(OrdemServico ordemServico,
+                                                     StatusOrdemServico statusAnterior,
+                                                     StatusOrdemServico statusAtual) {
+        if (statusAnterior == StatusOrdemServico.EM_EXECUCAO && statusAtual == StatusOrdemServico.FINALIZADA
+                && ordemServico.getDataInicioExecucao() != null && ordemServico.getDataFinalizacao() != null) {
+            observabilityService.recordStageDuration(
+                    ordemServico.getId(),
+                    StatusOrdemServico.EM_EXECUCAO,
+                    Duration.between(ordemServico.getDataInicioExecucao(), ordemServico.getDataFinalizacao())
+            );
+            return;
+        }
+
+        if (statusAnterior == StatusOrdemServico.FINALIZADA && statusAtual == StatusOrdemServico.ENTREGUE
+                && ordemServico.getDataFinalizacao() != null) {
+            observabilityService.recordStageDuration(
+                    ordemServico.getId(),
+                    StatusOrdemServico.FINALIZADA,
+                    Duration.between(ordemServico.getDataFinalizacao(), LocalDateTime.now())
+            );
         }
     }
 

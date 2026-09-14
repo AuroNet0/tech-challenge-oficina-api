@@ -4,25 +4,34 @@ import com.oficina.api.exception.BusinessException;
 import com.oficina.api.model.Cliente;
 import com.oficina.api.model.OrdemServico;
 import com.oficina.api.model.enums.StatusOrdemServico;
+import com.oficina.api.observability.BusinessObservabilityService;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class EmailService {
 
+    private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
+
     private final JavaMailSender javaMailSender;
     private final String baseUrl;
     private final String remetente;
+    private final BusinessObservabilityService observabilityService;
 
     public EmailService(ObjectProvider<JavaMailSender> javaMailSenderProvider,
                         @Value("${app.public-base-url:http://localhost:8080}") String baseUrl,
-                        @Value("${app.mail.from:noreply@oficina.com}") String remetente) {
+                        @Value("${app.mail.from:noreply@oficina.com}") String remetente,
+                        BusinessObservabilityService observabilityService) {
         this.javaMailSender = javaMailSenderProvider.getIfAvailable();
         this.baseUrl = baseUrl;
         this.remetente = remetente;
+        this.observabilityService = observabilityService;
     }
 
     public void enviarEmailAprovacao(OrdemServico ordemServico, String token) {
@@ -51,7 +60,7 @@ public class EmailService {
                 Reprovar: %s
                 """.formatted(cliente.getNome(), aprovarUrl, reprovarUrl));
 
-        javaMailSender.send(message);
+        enviarEmail(message, "approval-email");
     }
 
     public void enviarAtualizacaoStatus(OrdemServico ordemServico) {
@@ -74,7 +83,16 @@ public class EmailService {
                 %s
                 """.formatted(cliente.getNome(), mensagemStatus(ordemServico.getStatus())));
 
-        javaMailSender.send(message);
+        enviarEmail(message, "status-update-email");
+    }
+
+    private void enviarEmail(SimpleMailMessage message, String operation) {
+        try {
+            javaMailSender.send(message);
+        } catch (MailException ex) {
+            logger.warn("Falha ao enviar e-mail da operacao {}.", operation, ex);
+            observabilityService.recordExternalIntegrationError("email", operation, ex);
+        }
     }
 
     private boolean deveNotificarStatus(StatusOrdemServico status) {

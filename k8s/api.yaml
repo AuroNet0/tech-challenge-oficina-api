@@ -4,6 +4,11 @@ metadata:
   name: oficina-api
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 0
+      maxUnavailable: 1
   selector:
     matchLabels:
       app: oficina-api
@@ -14,10 +19,31 @@ spec:
     spec:
       containers:
         - name: oficina-api
-          image: api-oficina:latest
-          imagePullPolicy: IfNotPresent
+          image: 446517826146.dkr.ecr.us-east-1.amazonaws.com/tech-challenge-oficina-api:latest
+          imagePullPolicy: Always
           ports:
             - containerPort: 8080
+          startupProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 18
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
           env:
             - name: SPRING_DATASOURCE_URL
               valueFrom:
@@ -39,6 +65,26 @@ spec:
                 configMapKeyRef:
                   name: oficina-config
                   key: APP_PUBLIC_BASE_URL
+            - name: NEW_RELIC_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: oficina-config
+                  key: NEW_RELIC_ENABLED
+            - name: NEW_RELIC_APP_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: oficina-config
+                  key: NEW_RELIC_APP_NAME
+            - name: NEW_RELIC_APPLICATION_LOGGING_FORWARDING_CONTEXT_DATA_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: oficina-config
+                  key: NEW_RELIC_APPLICATION_LOGGING_FORWARDING_CONTEXT_DATA_ENABLED
+            - name: NEW_RELIC_APPLICATION_LOGGING_FORWARDING_CONTEXT_DATA_INCLUDE
+              valueFrom:
+                configMapKeyRef:
+                  name: oficina-config
+                  key: NEW_RELIC_APPLICATION_LOGGING_FORWARDING_CONTEXT_DATA_INCLUDE
             - name: APP_MAIL_FROM
               valueFrom:
                 secretKeyRef:
@@ -53,7 +99,7 @@ spec:
               valueFrom:
                 configMapKeyRef:
                   name: oficina-config
-                  key: POSTGRES_USER
+                  key: SPRING_DATASOURCE_USERNAME
             - name: SPRING_DATASOURCE_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -69,6 +115,11 @@ spec:
                 secretKeyRef:
                   name: oficina-secrets
                   key: SPRING_MAIL_PASSWORD
+            - name: NEW_RELIC_LICENSE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: oficina-secrets
+                  key: NEW_RELIC_LICENSE_KEY
           resources:
             requests:
               cpu: "250m"
@@ -87,4 +138,4 @@ spec:
   ports:
     - port: 8080
       targetPort: 8080
-  type: ClusterIP
+  type: LoadBalancer

@@ -37,3 +37,4 @@ build/
 .terraform/
 *.tfstate
 *.tfstate.*
+k8s/secret.yaml

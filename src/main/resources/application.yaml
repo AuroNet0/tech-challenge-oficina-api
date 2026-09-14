@@ -11,7 +11,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: ${SPRING_JPA_HIBERNATE_DDL_AUTO:create}
-    show-sql: true
+    show-sql: false
     defer-datasource-initialization: true
     properties:
       hibernate:
@@ -50,3 +50,15 @@ springdoc:
 
 server:
   port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+      show-components: never
+      probes:
+        enabled: true
