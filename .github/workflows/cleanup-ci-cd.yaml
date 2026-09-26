@@ -1,0 +1,46 @@
+name: Cleanup Kubernetes
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    environment: production
+
+    env:
+      AWS_REGION: us-east-1
+      EKS_CLUSTER: tech-challenge-oficina
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Configure kubectl
+        run: |
+          aws eks update-kubeconfig \
+            --name "$EKS_CLUSTER" \
+            --region "$AWS_REGION"
+
+      - name: Show resources before cleanup
+        run: |
+          kubectl get deployments,services,hpa -n default
+
+      - name: Remove API from Kubernetes
+        run: |
+          kubectl delete -f k8s/hpa.yaml --ignore-not-found=true
+          kubectl delete -f k8s/api.yaml --ignore-not-found=true
+
+      - name: Validate cleanup
+        run: |
+          kubectl get deployments,services,hpa -n default
